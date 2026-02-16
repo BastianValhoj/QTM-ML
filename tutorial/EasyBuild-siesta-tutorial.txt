@@ -1,0 +1,30 @@
+1. Update package lists and install prerequisites & Modules:
+   sudo apt update
+   sudo apt install -y build-essential git python3-pip environment-modules
+
+2. Enable Modules in your shell:
+   echo 'source /etc/profile.d/modules.sh' >> ~/.bashrc
+   source ~/.bashrc
+   module avail
+
+3. Install EasyBuild (user-level):
+   pip3 install --user easybuild-framework easybuild-easyblocks easybuild-easyconfigs
+   echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.bashrc
+   source ~/.bashrc
+   which eb
+
+4. Configure EasyBuild prefix & modulepath:
+   echo 'export EASYBUILD_PREFIX=$HOME/EasyBuild/software'   >> ~/.bashrc
+   echo 'export EASYBUILD_MODULEPATH=$HOME/EasyBuild/modules/all' >> ~/.bashrc
+   echo 'export MODULEPATH=$HOME/EasyBuild/modules/all:$MODULEPATH' >> ~/.bashrc
+   mkdir -p $HOME/EasyBuild/software $HOME/EasyBuild/modules/all
+   source ~/.bashrc
+
+5. Build & install SIESTA with EasyBuild:
+   eb Siesta-5.4.1-foss-2024a.eb --robot
+
+6. Load & verify SIESTA:
+   module avail Siesta
+   module load Siesta/5.4.1-foss-2024a
+   which siesta
+   siesta --help
