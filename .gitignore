@@ -229,7 +229,8 @@ ts-tbt-sisl-tutorial-main/
 *.ORB_INDX
 **/NON_TRIMMED_KP_LIST
 *.BASIS
-*.THSH
+*.TSHS
+*.BONDS*
 
 # Logs and Information
 *.out
@@ -244,7 +245,7 @@ ts-tbt-sisl-tutorial-main/
 
 # Temporary and Input-related
 **/INPUT_TMP.*
-**/BASIS_*
+*BASIS_*
 *.ion
 *.ion.*
 *.alloc
