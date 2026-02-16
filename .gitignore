@@ -205,3 +205,46 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+
+ts-tbt-sisl-tutorial-main/
+
+# --- SIESTA auto-generated files ---
+# Data and Density Matrices
+*.DM
+*.HSX
+*.DM.History
+*.TSDE
+
+# Structural and Force files
+*.XV
+*.STRUCT_OUT
+*.FA
+**/FORCE_STRESS
+
+# Spectral and K-point data
+*.EIG
+*.KP
+*.ORB_INDX
+**/NON_TRIMMED_KP_LIST
+*.BASIS
+*.THSH
+
+# Logs and Information
+*.out
+*.bib
+*.times
+**/MESSAGES
+**/CLOCK
+**/0_NORMAL*
+**/fdf.*.log
+**/OUTVARS.yml
+**/PARALLEL_DIST
+
+# Temporary and Input-related
+**/INPUT_TMP.*
+**/BASIS_*
+*.ion
+*.ion.*
+*.alloc
