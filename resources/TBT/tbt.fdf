@@ -1,0 +1,34 @@
+
+SystemName        graphene
+SystemLabel       graphene
+
+# ---------- Hamiltonian ----------
+TBT.HS Device.nc
+
+#---------- Electrode ----------
+%block TS.Elecs
+    Elec
+%endblock TS.Elecs
+
+%block TS.Elec.Elec
+    HS Elec.nc
+    semi-inf-direction  abc 
+    electrode-position 1
+    Out-of-core true
+    tbt.Gf      graphene.TBTGF
+%endblock 
+
+# ---------- k-point sampling ----------
+TBT.k [1 1 1]
+
+# ---------- Contour line ----------
+%block TBT.Contour.line
+  part line
+     from -3 eV to 3 eV
+       file contour.E 
+%endblock TBT.Contour.line
+
+# ---------- Output ----------
+TBT.DOS.A
+TBT.DOS.Gf
+TBT.Current.Orb
