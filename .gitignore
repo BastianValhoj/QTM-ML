@@ -208,47 +208,55 @@ __marimo__/
 
 
 # remove these sepcific tutorials from repo.
-ts-tbt-sisl-tutorial-main/* # this is included as a .zip for convenience # this is included as a .zip for convenience
-*Get-started-With-SIESTA+SISL_Guests.docx
+ts-tbt-sisl-tutorial-main/
+Get-started-With-SIESTA+SISL_Guests.docx
 
+meeting_notes/
 
 
 # --- SIESTA auto-generated files ---
-# Data and Density Matrices
+
+# 1. Ignore common SIESTA output extensions
 *.DM
 *.HSX
 *.DM.History
 *.TSDE
-
-# Structural and Force files
 *.XV
 *.STRUCT_OUT
 *.FA
-**/FORCE_STRESS
-
-# Spectral and K-point data
 *.EIG
 *.KP
 *.ORB_INDX
-**/NON_TRIMMED_KP_LIST
 *.BASIS
 *.TSHS
-*.BONDS*
-
-# Logs and Information
 *.out
 *.bib
 *.times
-**/MESSAGES
-**/CLOCK
-**/0_NORMAL*
-**/fdf.*.log
-**/OUTVARS.yml
-**/PARALLEL_DIST
-
-# Temporary and Input-related
-**/INPUT_TMP.*
-*BASIS_*
 *.ion
 *.ion.*
 *.alloc
+*.TBTGF
+*.nc
+*.BASIS_ENTHALPY
+*.BONDS*
+
+# 2. Ignore SIESTA specific log/temp files and directories
+**/FORCE_STRESS
+**/NON_TRIMMED_KP_LIST
+**/MESSAGES
+**/CLOCK
+**/0_NORMAL_EXIT
+**/fdf.*.log
+**/OUTVARS.yml
+**/PARALLEL_DIST
+**/INPUT_TMP.*
+**/BASIS_ENTHALPY
+**/BASIS_HARRIS_ENTHALPY
+**/TIMES
+
+# 3. EXCEPTIONS: Files we want to keep even if they match patterns above
+!*.fdf
+!*.psf
+!*.psml
+
+
