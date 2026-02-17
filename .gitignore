@@ -208,8 +208,8 @@ __marimo__/
 
 
 # remove these sepcific tutorials from repo.
-ts-tbt-sisl-tutorial-main/ # this is included as a .zip for convenience # this is included as a .zip for convenience
-resources/Get-started-With-SIESTA+SISL_Guests.docx
+ts-tbt-sisl-tutorial-main/* # this is included as a .zip for convenience # this is included as a .zip for convenience
+*Get-started-With-SIESTA+SISL_Guests.docx
 
 
 
