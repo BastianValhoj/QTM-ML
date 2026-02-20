@@ -58,10 +58,13 @@ def systemInit(bond=1.43, t=-2.7):
     return Ham0
 
 def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3j):
-    if isinstance(tile, int): 
-        Na = Nb = tile
+    if isinstance(tile, (int, float, np.int16, np.int32, np.int64)): 
+        Na = Nb = int(tile)
     elif isinstance(tile, (tuple, list)):
         Na, Nb = tile
+    else:
+        raise ValueError(f"invalid tile input: {tile} of type : {type(tile)}")
+    
     rse = sisl.RealSpaceSE(Ham, 0, 1, (Na, Nb, 1))
     rse.setup(eta=eta, bz=sisl.MonkhorstPack(Ham, [1, nk1, 1]))
     H = Ham.tile(Na, 0).tile(Nb, 1)
