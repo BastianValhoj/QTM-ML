@@ -13,9 +13,10 @@ def dysonEQ(z, S_mat, H_mat, rse, alist):
     
     invG = z*S_mat - H_mat
     RSE = rse.self_energy(z)
+    RSE_reordered = RSE[np.ix_(alist, alist)]
     
-    invG -= RSE[np.ix_(alist, alist)]
-    return invG
+    invG -= RSE_reordered
+    return invG, RSE_reordered
 
 def diag_inv_solver(invG):
     if spa.isspmatrix(invG):
@@ -26,8 +27,8 @@ def diag_inv_solver(invG):
         solver = lambda b: linalg.lu_solve(lu_and_piv, b)
     return solver
 
-def invertGF(invG, full=False):
-    if full: return linalg.inv(invG)
+def invertGF(invG, full_mat=False):
+    if full_mat: return linalg.inv(invG)
     
     K, _ = invG.shape
     diagG = np.zeros(K, dtype=complex)
@@ -76,6 +77,36 @@ def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3j):
     
     return H_final, rse, alist, elec_indices
 
+def calculate_spectral_GF(energies, eta, Ham_sub, rse, alist, elist):
+    if not isinstance(eta, complex):
+        eta = eta*1j # convert real values energy perturbation to complex
+    num_elec_atoms = len(elist) # number of atoms in electrode
+    num_atoms = len(Ham_sub) # number of atoms in system (device + electrode)
+    num_E = len(energies) # number of energy values
+    H_mat = Ham_sub.Hk(format="array", dtype=complex) # get Hamiltonian at Gamma point
+    S_mat = Ham_sub.Sk(format="array", dtype=complex) # get hopping matrix at Gamma point
+    
+    out = {"E": energies,
+           "eta": eta,
+           "H_re": Ham_sub,
+           "electrode_idx": elist,
+           "atoms_idx": alist}
+    GF = np.empty(shape=(num_E, num_atoms, num_atoms), dtype=complex)
+    RSEs = np.empty_like(GF, dtype=complex)
+    for i, E in enumerate(tqdm(energies, desc="Looping energies")):
+        z = E + eta
+        invG, RSE_reordered = dysonEQ(z=z, S_mat=S_mat, H_mat=H_mat, rse=rse, alist=alist)
+        GF[i, :, :] = invertGF(invG, full_mat=True)
+        RSEs[i, :, :] = RSE_reordered
+    out["GF"] = GF
+    out["RSE"] = RSEs
+    return out
+        
+    
+    
+    
+    
+
 def calculate_spectral_density(energies, eta, H_dev, rse, alist, elist):
     assert isinstance(eta, complex), "Energy perturbation must be complex and should be purely imag."
     nC = len(elist) # number atoms in electrode 
@@ -87,8 +118,8 @@ def calculate_spectral_density(energies, eta, H_dev, rse, alist, elist):
     LDOS = np.zeros(shape=(nS, nE), dtype=float)
     for i, E in enumerate(tqdm(energies, desc="LDOS calc")):
         z = E + eta
-        invG = dysonEQ(z, S_mat, H_mat, rse, alist)
-        G = invertGF(invG, full=True)
+        invG, _ = dysonEQ(z, S_mat, H_mat, rse, alist)
+        G = invertGF(invG, full_mat=True)
         LDOS[:, i] = calc_ldos(G)
     
     return LDOS

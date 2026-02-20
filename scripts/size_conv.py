@@ -37,9 +37,12 @@ for Na in tqdm(Ns, desc="Looping over size"):
     LDOS = calculate_spectral_density(energies, eta, H_final, rse, alist, elist)
     nC = len(elist)
     LDOS_dev = LDOS[nC:, :]
-    out[f"{Na}"] = LDOS_dev
+    out[f"{Na}"] = LDOS
+    out[f"device_{Na}"] = LDOS_dev
     out[f"alist_{Na}"] = alist
     out[f"elist_{Na}"] = elist
+    # save the self-energies 
+    # maybe save the spectral density
 
 # %%
 print(out.keys())
