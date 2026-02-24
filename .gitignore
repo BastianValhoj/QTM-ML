@@ -213,6 +213,8 @@ Get-started-With-SIESTA+SISL_Guests.docx
 
 meeting_notes/
 
+# Remove .npz files as they becomes too large for commits
+*.npz
 
 # --- SIESTA auto-generated files ---
 
