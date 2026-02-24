@@ -13,7 +13,7 @@ def dysonEQ(z, S_mat, H_mat, rse, alist):
     
     invG = z*S_mat - H_mat
     RSE = rse.self_energy(z)
-    RSE_reordered = RSE[np.ix_(alist, alist)]
+    RSE_reordered = RSE[np.ix_(alist, alist)] # equivalent to RSE but better for sparse arrays
     
     invG -= RSE_reordered
     return invG, RSE_reordered
@@ -58,6 +58,7 @@ def systemInit(bond=1.43, t=-2.7):
     return Ham0
 
 def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3j):
+    
     if isinstance(tile, (int, float, np.int16, np.int32, np.int64)): 
         Na = Nb = int(tile)
     elif isinstance(tile, (tuple, list)):
@@ -66,7 +67,10 @@ def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3j):
         raise ValueError(f"invalid tile input: {tile} of type : {type(tile)}")
     
     rse = sisl.RealSpaceSE(Ham, 0, 1, (Na, Nb, 1))
-    rse.setup(eta=eta, bz=sisl.MonkhorstPack(Ham, [1, nk1, 1]))
+    rse.setup(eta=np.abs(eta), # as argument for RSE it has to be supplied as real
+              bz=sisl.MonkhorstPack(Ham, [1, nk1, 1])
+              )
+    
     H = Ham.tile(Na, 0).tile(Nb, 1)
     H.set_nsc([1,1,1])
     _, elec_indices = rse.real_space_coupling(ret_indices=True)
@@ -94,15 +98,20 @@ def calculate_spectral_GF(energies, eta, Ham_sub, rse, alist, elist):
            "H_re": Ham_sub,
            "electrode_idx": elist,
            "atoms_idx": alist}
-    GF = np.empty(shape=(num_E, num_atoms, num_atoms), dtype=complex)
-    RSEs = np.empty_like(GF, dtype=complex)
+    
+    # GF = spa.csr_array((num_E, num_atoms, num_atoms), dytpe=np.complex128)
+    GF = np.empty(shape=(num_E, num_atoms, num_atoms), dtype=np.complex128)
+    # inv_GF = np.empty(shape=(num_E, num_atoms, num_atoms), dtype=np.complex128)
+    RSEs = np.empty_like(GF, dtype=np.complex128)
+    
     for i, E in enumerate(tqdm(energies, desc="Looping energies")):
         z = E + eta
         invG, RSE_reordered = dysonEQ(z=z, S_mat=S_mat, H_mat=H_mat, rse=rse, alist=alist)
-        GF[i, :, :] = invertGF(invG, full_mat=True)
         RSEs[i, :, :] = RSE_reordered
+        # inv_GF[i, :, :] = invG
+        GF[i, :, :] = invertGF(invG, full_mat=True)
     out["GF"] = GF
-    out["RSE"] = RSEs
+    out["RSE_re"] = RSEs
     return out
         
     

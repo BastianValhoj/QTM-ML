@@ -4,51 +4,71 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 from pathlib import Path
-from generator import calculate_spectral_density, systemInit, setup_ham_rse
+from generator import calculate_spectral_GF, systemInit, setup_ham_rse
 from itertools import product
 
-outdir = Path("ldos_combos")
-outdir.mkdir(exist_ok=True, parents=False)
+# %%
+
+OUTDIR = Path(__file__).parent / "ldos_combos"
+OUTDIR.mkdir(exist_ok=True, parents=False)
+# print(OUTDIR)
+# raise EOFError("testing, debugging")
 
 # %%
-Ns = np.array([(i*2)+1 for i in range(3,21,3)])
-k_samples = np.arange(50, 300, 50)
-etas = np.array([1e-1, 5e-2, 2e-2, 1e-2, 8e-3, 5e-3, 3e-3, 2e-3, 1e-3])
-
-dE = 0.1
-Emax = 3.0 # eV
-Emin = - Emax
-energies = np.array([i*dE for i in range(-3, 4)]); print(energies)
+LIST_OF_N = np.array([(i*4)+1 for i in range(2,11)])
+NK1 = 300
+ETA = 1e-3j
+DELTA_E = 0.1
+EMAX = 3.0 # eV
+EMIN = -EMAX
+ENERGIES = np.array([0])
+# ENERGIES = np.array([i*DELTA_E for i in range(-1, 2)])
 # energies = np.arange(Emin, Emax +  dE, dE)
 
-params = set(product(Ns, k_samples, etas))
+# params = set(product(Ns, k_samples, etas))
 
-# %%
-Ham = systemInit(bond=1.43, t=-2.7)
-nk1 = 250
-eta = 1e-3j
-out = {"nk1": nk1,
-       "eta": eta,
-       "E": energies,
-       }
+def main():
+    Ham0 = systemInit(bond=1.43, t=-2.7)
+    out = {"nk1": NK1,
+        "eta": ETA,
+        "E": ENERGIES,
+        }
+    OUTPUTS= {}
+    diffs = np.empty(shape=(len(LIST_OF_N), ), dtype=complex)
+    for i, N in enumerate(tqdm(LIST_OF_N, desc="Looping over size")):
+        n0 = 0
+        n_halfway_side = (N//2)+1
+        E0_idx = ENERGIES[np.nonzero(ENERGIES==0)]
+        H_final, rse, atoms_idxs, electrode_idxs = setup_ham_rse(Ham0, tile=int(N), nk1=NK1, eta=ETA)
+        out = calculate_spectral_GF(energies=ENERGIES, eta=ETA, Ham_sub=H_final, rse=rse, alist=atoms_idxs, elist=electrode_idxs)
+        OUTPUTS[f"{N}"] = out
+        
+        rse_re = out["RSE"]
+        rse_diag = np.diagonal(rse_re, axis1=1, axis2=2).copy()
+        rse_diff, = rse_diag[E0_idx, n0] - rse_diag[E0_idx, n_halfway_side]
+        diffs[i] = rse_diff
+    OUTPUTS["rse_diff"] = diffs
+    
+    return OUTPUTS
+        
+        # LDOS = calculate_spectral_density(ENERGIES, ETA, H_final, rse, alist, elist)
+        # nC = len(elist)
+        # LDOS_dev = LDOS[nC:, :]
+        # out[f"{Na}"] = LDOS
+        # out[f"device_{Na}"] = LDOS_dev
+        # out[f"alist_{Na}"] = alist
+        # out[f"elist_{Na}"] = elist
+    
+if __name__ == "__main__":
+    results = main()
+    print("Calculations done! output has keys:\n {}".format(results.keys()))
+    filename = OUTDIR / f"ldos-conv-NN.npz"
+    np.savez(filename, **results)
+# # %%
+# print(out.keys())
 
-for Na in tqdm(Ns, desc="Looping over size"):
-    H_final, rse, alist, elist = setup_ham_rse(Ham, tile=int(Na), nk1=nk1, eta=eta)
-    LDOS = calculate_spectral_density(energies, eta, H_final, rse, alist, elist)
-    nC = len(elist)
-    LDOS_dev = LDOS[nC:, :]
-    out[f"{Na}"] = LDOS
-    out[f"device_{Na}"] = LDOS_dev
-    out[f"alist_{Na}"] = alist
-    out[f"elist_{Na}"] = elist
-    # save the self-energies 
-    # maybe save the spectral density
-
-# %%
-print(out.keys())
-
-# %%
-filename = outdir / f"ldos-conv-NN.npz"
-np.savez(filename, **out)
+# # %%
+# filename = OUTDIR / f"ldos-conv-NN.npz"
+# np.savez(filename, **out)
 
 
