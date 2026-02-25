@@ -57,12 +57,51 @@ def systemInit(bond=1.43, t=-2.7):
     Ham0.construct([r, t])
     return Ham0
 
-def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3j):
+def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3):
+    """Setup Hamiltonian and real-space self-energy for system
+
+    Parameters
+    ----------
+    Ham : sisl.Hamiltonian
+        Hamiltonian of base system to tile
+        
+    tile : int | tuple, optional
+        How many times to tile in unitcell direction `a` abd `b`. If single integer use same tiling in `a` and `b`, by default 4
+        
+    nk1 : int, optional
+        Number of k-points to sample in transverse direction. In theory this should decrease with increasing `tile=(Na, Nb)`, by default 100
+        
+    eta : flaot, optional
+        Energy perturbation for Real-Space self-energy calculation, by default 1e-3.  
+        Since the `sisl.RealSpaceSE().setup(eta)` uses a real number as input, whatever `eta` is supplied here will be parsed as `eat = abs(eta)`.
+
+    Returns
+    -------
+    H_final : sisl.Hamiltonian
+        The Hamiltonian reordered to have all electrode atoms as the first element.
+    rse : sisl.RealSpaceSE
+        The self-energy object (this object is not reordered)
+    alist : np.ndarray
+        The numpy array of atoms indices reordered to have electrode atoms as the first elements
+    elist : np.ndarray
+        The numpy array of electrode indices. These indices are also the first elements of `alist`
+    
+
+    Raises
+    ------
+    ValueError
+        If either the number of `tile` is not a integer or the elements of the `tile`-tuple cannot be interpreted as integers.
+    """
     
     if isinstance(tile, (int, float, np.int16, np.int32, np.int64)): 
         Na = Nb = int(tile)
     elif isinstance(tile, (tuple, list)):
-        Na, Nb = tile
+        try:
+            Na, Nb = tile
+            Na = int(Na)
+            Nb = int(Nb)
+        except Exception:
+            raise ValueError(f"Invalid tile input: {tile} with elements of type {type(tile[0])}, and {type(tile[1])}")
     else:
         raise ValueError(f"invalid tile input: {tile} of type : {type(tile)}")
     
@@ -85,6 +124,29 @@ def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3j):
     return H_final, rse, alist, elec_indices
 
 def calculate_spectral_GF(energies, eta, Ham_sub, rse, alist, elist):
+    """Calculate the self-energy and GF from input
+
+    Parameters
+    ----------
+    energies : np.ndarray, shape=(K,)
+        Energies to copute the calculations
+    eta : complex
+        Energy perturbation used in NGEF: `z = E + eta*1j`
+    Ham_sub : sisl.Hamiltonian, shape=(N,N)
+        The reordered Hamiltonian
+    rse : sisl.RealSpaceSE, shape=(N,N)
+        self-energy object to use
+    alist : np.ndarray, shape=(N)
+        list of the reordered atom indices 
+    elist : np.ndarray, shape=(J)
+        list of the electrode atom indices
+
+    Returns
+    -------
+    dict
+        dictionary with keys `E`, `eta`, `H_re`, `electrode_idx`, `atoms_idx`, `GF`, and `RSE_re`.  
+        The shape of the arrays in `GF` and `RSE_re` are *shape=(K,N,N)* corresponding to the (N x N) array for each energy calculation.
+    """
     if not isinstance(eta, complex):
         eta = eta*1j # convert real values energy perturbation to complex
     num_elec_atoms = len(elist) # number of atoms in electrode
