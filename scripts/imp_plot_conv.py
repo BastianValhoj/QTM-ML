@@ -19,8 +19,8 @@ else:
 
 
 # init global data
-a = np.array([ 1.])
-b = np.array([1, 3, 4, ])*(-1)
+a = np.array([1.])
+b = np.array([1, 3, 4, 5])*(-1)
 ETAS = np.multiply.outer(10.0**b, a, dtype=np.float128).ravel()
 print('etas ({}) : {}'.format(len(ETAS), ETAS))
 
@@ -41,12 +41,14 @@ NK1 = int(np.ceil(3*900/12))
 SEMI_AXIS = 0 # semi-infinite axis
 K_AXES = 1 # k-sampling axis/axes
 
-
+_vmin = 0
+_vmax = 0
 with h5py.File(OUTDIR / 'RSE_data.h5', 'w') as file:
     file.attrs['E'] = ENERGIES
     file.attrs['E0_idx'] = E0_IDX
-    file.attrs['ETAS'] = ETAS
-    
+    file.attrs['ETA'] = ETAS
+    file.attrs['N'] = NLIST
+
     for i, N in enumerate(tqdm(NLIST, desc="Looping tiling", leave=True)):
         
         group_N = file.create_group(f"N_{N}")
@@ -68,9 +70,9 @@ with h5py.File(OUTDIR / 'RSE_data.h5', 'w') as file:
         num_E = len(ENERGIES)
         RSEs_shape = (num_E, num_atoms, num_atoms)
         
-        group_N.create_dataset("xyz", data=HamNN_re.geometry.xyz)
-        group_N.create_dataset("atoms_idx", data=atoms_idx)
-        group_N.create_dataset("elec_idx", data=elec_idx)
+        group_N.create_dataset("xyz", data=HamNN_re.geometry.xyz, dtype=np.float64)
+        group_N.create_dataset("atoms_idx", data=atoms_idx, dtype=np.int16)
+        group_N.create_dataset("elec_idx", data=elec_idx, dtype=np.int16)
         
         del HamNN, HamNN_re
         gc.collect()
@@ -81,16 +83,27 @@ with h5py.File(OUTDIR / 'RSE_data.h5', 'w') as file:
                 rse = sisl.RealSpaceSE(Ham0, SEMI_AXIS, K_AXES, (N, N, 1))
                 rse.setup(eta=eta,
                         bz=sisl.MonkhorstPack(Ham0, [1, NK1, 1]))
-            RSEs_group_eta = group_N.create_dataset(f"eta_{eta}",shape=RSEs_shape,
+            RSEs_group_eta = group_N.create_dataset(f"eta_{eta:.1e}",shape=RSEs_shape,
                                           dtype=np.complex128, compression='gzip')            
         
             for i, E in enumerate(tqdm(ENERGIES, desc='Looping energies', leave=False)):
                 z = E + eta*1j
                 # RSE_re = rse.self_energy(z)[atoms_idx, :][:, atoms_idx]
                 RSEs_group_eta[i, :, :] = rse.self_energy(z)[atoms_idx, :][:, atoms_idx]
-            
+            _vmin = np.min([_vmin,
+                            np.min([np.real(RSEs_group_eta),
+                                    np.imag(RSEs_group_eta)
+                                    ])
+                            ])
+            _vmax = np.max([_vmax,
+                            np.max([np.real(RSEs_group_eta),
+                                    np.imag(RSEs_group_eta)])
+                            ])
+                
             del rse, RSEs_group_eta #, RSE_re
             gc.collect()
-                
+    file.attrs['vmin'] = _vmin
+    file.attrs['vmax'] = _vmax
     del group_N, all_atoms, device_atoms, elec_idx, atoms_idx
     gc.collect()
+
