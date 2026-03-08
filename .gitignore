@@ -212,7 +212,7 @@ ts-tbt-sisl-tutorial-main/
 Get-started-With-SIESTA+SISL_Guests.docx
 
 meeting_notes/
-!*.pptx
+!meeting_notes/*.pptx
 
 # Remove .npz files as they becomes too large for commits
 *.npz
