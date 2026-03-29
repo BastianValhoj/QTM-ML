@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module load Siesta
+
 # If $1 is empty, set NW_PARAM to 10. Otherwise use $1
 NW_PARAM=${1:-10}
 
