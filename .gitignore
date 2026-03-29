@@ -256,6 +256,9 @@ meeting_notes/*
 **/BASIS_ENTHALPY
 **/BASIS_HARRIS_ENTHALPY
 **/TIMES
+**/time.json
+
+**/TBT-Nw*
 
 # 3. EXCEPTIONS: Files we want to keep even if they match patterns above
 !*.fdf
