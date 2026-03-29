@@ -42,20 +42,33 @@ def make_device(bond=1.42, kind="armchair"):
 
 
 def all_armchair(bond):
-    theta = np.pi*(3/2) # angle in hexagon lattice
-    phi = theta/2
-    b = bond*np.sqrt(3)/2
-    gr = sisl.geom.graphene_flake(0, bond=bond)
-    gr = gr\
-        .translate(-gr.center())\
-            .rotate([phi/2, [0,0,1]], rad=True, what="xyz") \
-                .translate([2*b, 0, 0])
-                
-    base = np.array([3*bond, 0, 0])
-    armchair_cell = np.array([Rz(-phi/2)@base,
-                            Rz(phi/2)@base,
-                            [0,0,20]])
-    gr.set_lattice(armchair_cell)
-    sort_idx = np.lexsort([gr.xyz[:, 2], gr.xyz[:, 1], gr.xyz[:, 0]])
+    theta = np.pi*(2/3) # angle in hexagon lattice
+    phi = theta/2 # half angle
+    b = bond*np.sqrt(3)/2 # inner-radii of hexagon
+    vac = 20
+    gr = sisl.geom.graphene_flake(0, bond=bond, vacuum=vac) # based on flake structure for conveniece
+    gr = gr.translate(-gr.center()) # center structure to origo
+    gr = gr.rotate([phi/2, [0,0,1]], rad=True, what="xyz") # rotate  atoms by 30 degrees (only atoms and not unit cell)
+    gr = gr.translate([2*b, 0, 0]) # translate twice by inner radii to make edges follow unit cell vectors
+    
+    # define and set the new unit vectors
+    base = np.array([3*bond, 0, 0]) 
+    armchair_cell = np.array([Rz(-phi/2)@base, # rotate vector A by -30 degrees (clockwise)
+                            Rz(phi/2)@base, # rotate vector B by 30 degrees (counter-clockwise)
+                            [0,0,vac]]) # no change for C vector
+    
+    gr.set_lattice(armchair_cell) 
+    
+    
+    
+    # sort atom by keys -- right-most / last key (the x-coord) is most 'dominant' and uses others as tie breakers 
+    # this method only sorts correctly if we use fractional coordiantes
+    fracxyz = gr.xyz @ np.linalg.inv(gr.cell)
+    
+    exponent = 6
+    tol = 10**(-exponent)
+    fracxyz = np.where(np.isclose(fracxyz, 0, atol=tol), 0.0, fracxyz.round(exponent)) 
+    sort_idx = np.lexsort([fracxyz[:, 2], fracxyz[:, 1], fracxyz[:, 0]])
     gr = gr.sub(sort_idx)
+    gr.set_nsc([3,3,1])
     return gr
