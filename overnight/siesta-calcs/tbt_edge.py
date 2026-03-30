@@ -12,7 +12,7 @@ if len(sys.argv) > 1:
         print(f"Warning: Argument '{sys.argv[1]}' is not a number. Using defualt {DEFAULT_NW}")
         Nw = DEFAULT_NW
 else:
-    print(f"No argument procided. Using default {DEFALUT_NW}")
+    print(f"No argument procided. Using default {DEFAULT_NW}")
     Nw = DEFAULT_NW
 
 file_dir = Path(__file__).parent
