@@ -217,6 +217,9 @@ meeting_notes/*
 # Remove .npz files as they becomes too large for commits
 *.npz
 
+# Remove weird temp files from unsaved chagnes to pdf (like hightlighting)
+*.pdf:Zone.Identifier
+
 # --- SIESTA auto-generated files ---
 
 # 1. Ignore common SIESTA output extensions
