@@ -20,7 +20,7 @@ tex_fonts = {
         "grid.linewidth": 0.5,          # 
         "lines.linewidth":1.5,          # 
         "figure.titlesize": fontsize+4, # Overall figure title size
-        "axes.labelpad": 10,            # Distance between label and axis
+        "axes.labelpad": 0,            # Distance between label and axis
         "savefig.dpi": 300,             # High resoltion for any raster elements
         "savefig.format": "pdf",        # Default to pdf for LaTeX compatibility
         "savefig.bbox": "tight",        # Equivalent to bbox_inches='tight'
@@ -33,14 +33,15 @@ def thesis_fig(width_pt=426.79135,
         fraction=1, 
         subplots=(1,1), 
         use_tex=False,
+        aspect=None,
         **kwargs):
-    """
+    r"""
     Initializes a matplotlib figure with dimensions scaled to a LaTeX document.
 
     Parameters
     ----
     width_pt : float, default 426.79135,
-        the \textwidth of the LaTeX doc.
+        the `\textwidth` of the LaTeX doc.
     fraction: float, default 1.0,
         how much of the page width the plot should take (0.5=half, 1=whole)
     subplots : tuple, default (1, 1)
@@ -58,10 +59,14 @@ def thesis_fig(width_pt=426.79135,
     # 1.  calculate Dimensions
     fig_width_pt = width_pt * fraction
     inches_per_pt = 1/72.27
-    golden_ratio = (5**0.5 - 1) / 2
-
     fig_width_in = fig_width_pt * inches_per_pt
-    fig_height_in = fig_width_in * golden_ratio * (subplots[0] / subplots[1])
+    
+    
+    if aspect is None:
+        golden_ratio = (5**0.5 - 1) / 2
+        fig_height_in = golden_ratio * fig_width_in * (subplots[0] / subplots[1])
+    else:
+        fig_height_in = (fig_width_in / subplots[1]) * subplots[1] * aspect
 
     tex_fonts["figure.figsize"] = (fig_width_in, fig_height_in)
     tex_fonts["text.usetex"] = use_tex
