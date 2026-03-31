@@ -92,3 +92,18 @@ def thesis_fig(width_pt=426.79135,
     #     a.yaxis.set_major_formatter(formatter)
 
     return fig, ax
+
+
+
+def label_subplots(axes, 
+                   labels=['a)', 'b)', 'c)', 'd)', 'e)', 'f)', 'g)', 'h)'], 
+                   pos=(0.09, 0.95)):
+    flat_axes = axes.flatten()
+    
+    x, y = pos
+
+    for i, ax in enumerate(flat_axes):
+        # x=-0.1, y=1.1 positions the label slightly outside the top-left corner
+        # transform=ax.transAxes ensures (0,0) is bottom-left and (1,1) is top-right of the plot
+        ax.text(x, y, labels[i], transform=ax.transAxes,
+                fontsize=15, fontweight='bold', va='top', ha='right')
