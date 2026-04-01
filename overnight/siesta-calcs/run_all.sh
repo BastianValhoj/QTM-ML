@@ -26,7 +26,6 @@ echo "-----------------------------------"
 
 # 1. Run the python script and wait for it to finish succesfully
 echo "Starting step 1: tbt_edge.py..."
-echo $NW_PARAM
 uv run tbt_edge.py $NW_PARAM
 
 # Check if step 1 failed
@@ -46,8 +45,12 @@ fi
 echo "Step 1 complete. Starting TBTrans calculations in parallel..."
 
 # 2. Start the armchair calculations in the background
-echo "Remocing old *.TBT.nc files"
+echo "Removing old *.TBT.nc files"
 rm -f $ARM_DIR/*.TBT.nc $ARM_DIR/*.SE.nc $ZIG_DIR/*.TBT.nc $ZIG_DIR/*.SE.nc
+
+echo "-------------------------------------------------"
+echo "## Check progress with: tail -f <armchair|zigzag>.log"
+echo "-------------------------------------------------"
 
 echo "Launching Armchair"
 mpirun -np $NP_PARAM tbtrans < $ARM_DIR/RUNTBT.fdf > armchair.log 2>&1
@@ -63,8 +66,6 @@ mpirun -np $NP_PARAM tbtrans < $ZIG_DIR/RUNTBT.fdf > zigzag.log 2>&1
 echo "Zig-zag calculations finished."
 
 #echo "Both jobs are running in the background. Tracking PIDs: $PID_ARM, $PID_ZIG"
-echo "## Check progress with: tail -f <armchair|zigzag>.log"
-echo "-------------------------------------------------"
 
 # 4. Wait for both background processes to finish
 #echo "Waiting for parallel tasks to complete..."
