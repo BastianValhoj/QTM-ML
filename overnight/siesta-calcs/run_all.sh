@@ -2,11 +2,26 @@
 
 module load Siesta
 
-# If $1 is empty, set NW_PARAM to 10. Otherwise use $1
-NW_PARAM=${1:-10}
+# --- default values ---
+
+NW_PARAM=10
+NP_PARAM=4
+
+
+# --- Parse Flags ---
+while getops "n:w:" opt; do
+	case $opt in 
+		n) NP_PARAM=$OPTARG ;;
+		w) NW_PARAM=$OPTARG ;;
+		\?) echo "Invalid option -$OPTARG" >&2; exit 1 ;;
+	esac
+done
+
 
 echo "-----------------------------------"
+echo "Machine: $(hostname)"
 echo "Staring workflow for Nw = $NW_PARAM"
+echo "Resources: $NP_PARAM processors"
 echo "-----------------------------------"
 
 # 1. Run the python script and wait for it to finish succesfully
@@ -32,7 +47,7 @@ echo "Step 1 complete. Starting TBTrans calculations in parallel..."
 
 # 2. Start the armchair calculations in the background
 echo "Launching Armchair"
-mpirun -np 4 tbtrans < $ARM_DIR/RUNTBT.fdf > armchair.log 2>&1
+mpirun -np $NP_PARAM tbtrans < $ARM_DIR/RUNTBT.fdf > armchair.log 2>&1
 #PID_ARM=$!
 echo "Armchair calculations finished."
 
@@ -40,7 +55,7 @@ echo "Armchair calculations finished."
 
 # 3. Start the zig-zag calculations in the background
 echo "Launching Zig-zag"
-mpirun -np 4 tbtrans < $ZIG_DIR/RUNTBT.fdf > zigzag.log 2>&1
+mpirun -np $NP_PARAM tbtrans < $ZIG_DIR/RUNTBT.fdf > zigzag.log 2>&1
 #PID_ZIG=$!
 echo "Zig-zag calculations finished."
 
