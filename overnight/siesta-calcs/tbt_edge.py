@@ -56,6 +56,11 @@ TBT.DOS.Elecs True
 TBT.DOS.A.All True
 TBT.DOS.Gf True
 
+elsi-gpu 1
+%block ELSI.Output
+    DbgLevel 1
+%endblock ELSI.Output
+
 %block TS.Elecs
   ELeft
   ERight

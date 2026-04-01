@@ -9,7 +9,7 @@ NP_PARAM=4
 
 
 # --- Parse Flags ---
-while getops "n:w:" opt; do
+while getopts "n:w:" opt; do
 	case $opt in 
 		n) NP_PARAM=$OPTARG ;;
 		w) NW_PARAM=$OPTARG ;;
@@ -46,6 +46,9 @@ fi
 echo "Step 1 complete. Starting TBTrans calculations in parallel..."
 
 # 2. Start the armchair calculations in the background
+echo "Remocing old *.TBT.nc files"
+rm -f $ARM_DIR/*.TBT.nc $ARM_DIR/*.SE.nc $ZIG_DIR/*.TBT.nc $ZIG_DIR/*.SE.nc
+
 echo "Launching Armchair"
 mpirun -np $NP_PARAM tbtrans < $ARM_DIR/RUNTBT.fdf > armchair.log 2>&1
 #PID_ARM=$!
