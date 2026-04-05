@@ -21,6 +21,7 @@ def sort_atoms(geom, order='xzy', atol=1e-2):
     # print(axes)
     idxs = np.lexsort([xyz[:, axes[0]], xyz[:, axes[1]], xyz[:, axes[2]]])
     return idxs
+
 def make_device(bond=1.42, kind="armchair"):
     gr = sisl.geom.graphene(bond=bond, atoms="C", orthogonal=True) # returns *orthogonal* unitcell instead of primitive
     
@@ -38,8 +39,6 @@ def make_device(bond=1.42, kind="armchair"):
         gr.set_nsc([3,3,1])
         gr = gr.sub(idxs)
         return gr
-
-
 
 def all_armchair(bond):
     theta = np.pi*(2/3) # angle in hexagon lattice
