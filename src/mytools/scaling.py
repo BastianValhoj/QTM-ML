@@ -2,6 +2,10 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 
+def dict2array(d):
+    lst = list(d.values()) # list of list of values
+    flat = np.concatenate(lst) # concatenate list of list to a 1D array
+    return flat
 
 def get_corner_atoms(coords, corner, k=1):
     """Find corner atom indices belonging to specific corner
@@ -68,7 +72,7 @@ def find_pair_edges(geom, corners):
     ii : np.ndarray of shape (2, N)
         the indices of the N pairs of edge atoms
     """
-    edge_atoms = np.delete(np.arange(geom.na), np.concatenate(list(corners.values())))
+    edge_atoms = np.delete(np.arange(geom.na), dict2array(corners))
     tree = cKDTree(geom.xyz)
     dist, ii = tree.query(geom.xyz[edge_atoms], k=2)
     ii = ii[0::2] # skip every second entry because that is the other part of the edge pair
@@ -150,13 +154,13 @@ def find_equiv_pair(geom1, geom2):
     ```
     
     """
-    if geom1.na > geom2.na:
-        _tmp = geom1.copy()
-        geom1 = geom2.copy()
-        geom2 = _tmp.copy()
-        del _tmp
+    # if geom1.na > geom2.na:
+    #     _tmp = geom1.copy()
+    #     geom1 = geom2.copy()
+    #     geom2 = _tmp.copy()
+    #     del _tmp
     
-    assert geom1.na < geom2.na, f"The first Geometry has to be smallest ({geom1.na}, {geom2.na})"
+    assert geom1.na < geom2.na, f"The first Geometry has to be smallest ({geom1.na} !< {geom2.na})"
 
     # xyz1 = geom1.xyz
     # xyz2 = geom2.xyz
@@ -208,5 +212,4 @@ def map_index(geom1, geom2):
         parts[2], # opposing semi-infinite edge is the last
         corners1['A+B'], # the last corner -- the corner of the largest indices (the last atoms)
     ])
-    return np.array([np.arange(geom2.na), 
-                     g1_to_g2])
+    return g1_to_g2
