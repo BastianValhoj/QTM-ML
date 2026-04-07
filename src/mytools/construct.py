@@ -13,6 +13,23 @@ Ry = lambda theta: Rz(theta)[np.ix_([1,2,0], [1,2,0])]
 
 
 def sort_atoms(geom, order='xzy', atol=1e-2):
+    """Sort atoms according to `order`
+
+    Parameters
+    ----------
+    geom : sisl.Geometry, or child classes
+        The geometry to reorder
+    order : str, optional
+        the order to sort (buy most to least important), by default 'xzy'
+    atol : float, optional
+        the tolerance for rounding +/- float to 0, by default 1e-2.
+        Used for creating sorting mask, and therefore the entries of `-0.000000x` converts to `0.0` 
+
+    Returns
+    -------
+    idxs : np.ndarray
+        The indices sorting the atoms according to the `order`
+    """
     xyz = geom.xyz.round(5)
     mask = np.isclose(xyz, 0, atol=atol)
     xyz = np.where(mask, 0, xyz)
@@ -23,6 +40,8 @@ def sort_atoms(geom, order='xzy', atol=1e-2):
     return idxs
 
 def make_device(bond=1.42, kind="armchair"):
+    """Create a-NGR or z-NGR unitcell for tiling
+    """
     gr = sisl.geom.graphene(bond=bond, atoms="C", orthogonal=True) # returns *orthogonal* unitcell instead of primitive
     
     if kind == "armchair":
@@ -40,7 +59,20 @@ def make_device(bond=1.42, kind="armchair"):
         gr = gr.sub(idxs)
         return gr
 
-def all_armchair(bond):
+def all_armchair(bond=1.42):
+    """create a graphene 2D layer having armchair edges all around.
+    The regular method is `sisl.geom.graphene(bond)` returns a graphene layer of all zig-zag edges
+
+    Parameters
+    ----------
+    bond : float, optional
+        The bond length in graphene, default is 1.42
+
+    Returns
+    -------
+    gr : sisl.Geometry
+        The unitcell (of 6 atoms) for a all armchair edge graphene layer, with nsc=[3,3,1]
+    """
     theta = np.pi*(2/3) # angle in hexagon lattice
     phi = theta/2 # half angle
     b = bond*np.sqrt(3)/2 # inner-radii of hexagon
