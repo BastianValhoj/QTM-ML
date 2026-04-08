@@ -6,6 +6,24 @@ import sisl
 import h5py
 import gc
 
+KIND = "armchair"
+
+
+def systemInit(bond=1.43, t=-2.7, kind="zigzag"):
+    if kind == "zigzag":
+        graphene = sisl.geom.graphene(bond)
+    elif kind == "armchair":
+        from mytools.construct import all_armchair
+        graphene = all_armchair(bond)
+    else:
+        raise ValueError(f"Invalid 'kind' : {kind}")
+        
+    Ham0 = sisl.Hamiltonian(graphene)
+    r = (0.1*bond, bond+1e-2)
+    t = (0.0, t)
+    Ham0.construct([r, t])
+    return Ham0
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUTDIR = SCRIPT_DIR / "conv_data"
 if not OUTDIR.exists():
@@ -34,7 +52,14 @@ E0_IDX = np.argwhere(ENERGIES == 0).ravel() # returns tuple of arrays of len == 
 E0_IDX = E0_IDX[0] # since ENERGIES is 1d array, the tuple has len 1
 print('idx(E=0) : {}'.format(E0_IDX))
 
-NLIST = np.array([4*i+1 for i in range(2, 6)])[::-1]
+# NLIST = np.array([4*i+1 for i in range(2, 6)])[::-1]
+if KIND == "armchair":
+    NLIST = np.array([2*i+1 for i in range(1, 4)])[::-1]
+elif KIND == "zigzag":
+    NLIST = np.array([4*i+1 for i in range(2, 6)])[::-1]
+else:
+    raise ValueError(f"'KIND' must be either `armchair` or `zigzag`")
+    
 print(f"Ns : {NLIST}, shape={NLIST.shape}")
 
 NK1 = int(np.ceil(3*900/12))
@@ -43,7 +68,7 @@ K_AXES = 1 # k-sampling axis/axes
 
 _vmin = 0
 _vmax = 0
-with h5py.File(OUTDIR / 'RSE_data.h5', 'w') as file:
+with h5py.File(OUTDIR / f'RSE_data-{KIND}.h5', 'w') as file:
     file.attrs['E'] = ENERGIES
     file.attrs['E0_idx'] = E0_IDX
     file.attrs['ETA'] = ETAS
@@ -53,7 +78,7 @@ with h5py.File(OUTDIR / 'RSE_data.h5', 'w') as file:
         
         group_N = file.create_group(f"N_{N}")
         
-        Ham0 = systemInit(1.43, -2.7)
+        Ham0 = systemInit(1.43, -2.7, kind=KIND)
         HamNN = Ham0.tile(N, 0).tile(N, 1)
         HamNN.set_nsc([1,1,1])
         
