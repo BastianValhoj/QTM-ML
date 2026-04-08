@@ -197,10 +197,17 @@ def map_index(geom1, geom2):
     corners1, corners2, centers, edgeIDs, pairIndices = find_equiv_pair(geom1, geom2)
     g1_to_g2_edgeIdx = edgeIDs[pairIndices].flatten()
     
-    # take difference between subsequent indices
-    diffs = np.diff(g1_to_g2_edgeIdx)
-    # find indices where elements of diff increase more than 3 (going from one edge to another) 
-    split_indices = np.where(diffs > 3)[0] + 1
+    
+    all_atoms = np.arange(geom2.na)
+    corner_atoms = dict2array(corners2)
+    edge_atoms = np.delete(all_atoms, corner_atoms)
+    
+    # take difference between subsequent indices of the 'actual' indices of geom2
+    diffs = np.diff(edge_atoms)
+
+    # find indices where elements of diff increase more than 1,
+    # since when the edge indices increase more than 1 it has moved beyond a corner to another edge
+    split_indices = np.where(diffs > 1)[0] + 1
     # split edge indices to list of arrays for each edge
     parts = np.split(g1_to_g2_edgeIdx, split_indices)
     g1_to_g2 = np.concatenate([
