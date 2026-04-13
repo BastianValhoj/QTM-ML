@@ -7,12 +7,13 @@ from pathlib import Path
 from generator import calculate_spectral_density, systemInit, setup_ham_rse
 from itertools import product
 
-outdir = Path("ldos_combos")
+script_dir = Path(__file__).parent
+outdir = script_dir / "ldos_combos"
 outdir.mkdir(exist_ok=True, parents=False)
 
 # %%
 # Ns = np.array([(i*2)+1 for i in range(3,21,3)])
-k_samples = np.arange(50, 300, 50)
+k_samples = np.arange(50, 300, 50, dtype=int)
 # etas = np.array([1e-1, 5e-2, 2e-2, 1e-2, 8e-3, 5e-3, 3e-3, 2e-3, 1e-3])
 
 dE = 0.1
@@ -47,7 +48,8 @@ out["elist"] = elist
 print(out.keys())
 
 # %%
-filename = outdir / f"ldos-conv-nk.npz"
+filename = outdir / f"{Path(__file__).stem}-ldos.npz"
+print(f"saving results to file {filename}")
 np.savez(filename, **out)
 
 
