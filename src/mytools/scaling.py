@@ -80,9 +80,10 @@ def find_pair_edges(geom, corners):
     return pair_center, ii
 
 
-def get_fractional(geom, coords=None):
+def get_fractional(geometry, coords=None):
     """Map Cartesion coordinates to fractional coordinates, 
     between 0 and 1 representing position relative to unitcell vertices."""
+    geom = geometry.copy()
     Inv = geom.icell.T[:2, :2]
     if coords is not None:
         coords = coords[:, :2]
