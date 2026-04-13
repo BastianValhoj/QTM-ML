@@ -7,7 +7,8 @@ from pathlib import Path
 from generator import calculate_spectral_density, systemInit, setup_ham_rse
 from itertools import product
 
-outdir = Path("ldos_combos")
+script_dir = Path(__file__).parent
+outdir = script_dir / "ldos_combos"
 outdir.mkdir(exist_ok=True, parents=False)
 
 # %%
@@ -48,7 +49,8 @@ out["elist"] = elist
 print(out.keys())
 
 # %%
-filename = outdir / f"ldos-conv-eta.npz"
+filename = outdir / f"{Path(__file__).stem}-ldos.npz"
+print(f"saving output to : \n{filename}")
 np.savez(filename, **out)
 
 
