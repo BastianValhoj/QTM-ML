@@ -5,11 +5,14 @@ from tqdm.auto import tqdm
 import json
 from pathlib import Path
 from datetime import datetime
+from mytools.construct import all_armchair
 
 
+
+kind = "armchair"
 cwd = Path(__file__).parent
 param_file = cwd / "geom_params.json"
-out_file = cwd / "zigzag-edge"
+out_file = cwd / f"{kind}-edge"
 
 ## Global params
 if param_file.exists():
@@ -28,20 +31,34 @@ else:
 
 
 def main():
-    start = 13
-    stop = 31
-    step = 2
-    tiles = np.arange(start, stop, step)
-    num_n = len(tiles)
+    print(f"kind = {kind}")
 
     energies = np.arange(0.0, 0.3, 0.1)
     num_e = len(energies)
+    if kind == "zigzag":
 
-    gr_base = sisl.geom.graphene(BOND)
+        start = 13
+        stop = 31
+        step = 2
+        gr_base = sisl.geom.graphene(BOND)
+        kNN = 10
+        #kNNslice = lambda N: slice(N//2 - kNN//2, N//2 + kNN//2, 1)
+        
+    elif kind == "armchair":
+        start = 10 
+        stop = 20
+        step = 2
+        gr_base = all_armchair(BOND)
+        kNN = 20
+        #kNNslice = lambda N: slice(N - kNN//2, N + kNN//2, 1)
+        
+    tiles = np.arange(start, stop, step)
+    num_n = len(tiles)
+
     ham0 = sisl.Hamiltonian(gr_base)
     ham0.construct([R, T])
     onsite_edge_center = np.zeros(shape=(num_n, num_e))
-    edge_coupling = np.zeros(shape=(num_n, num_e, 10), dtype=np.complex128)
+    edge_coupling = np.zeros(shape=(num_n, num_e, kNN), dtype=np.complex128)
     for i, N in enumerate(tqdm(tiles, desc='looping tiling')):
         pbar_e = tqdm(energies, desc='looping energy', leave=(num_n-1 == i)) # only leave if it is the last
 
@@ -55,18 +72,22 @@ def main():
         ham_nn.sub(all_idx)
         ham_nn.reduce()
         for j, en in enumerate(pbar_e):
-            pbar_e.set_postfix(N=N, E=f"{en:.2f}")
+            pbar_e.set_postfix(N=N, Na=ham_nn.na, E=f"{en:.2f}")
             
             z = en + ETA*1j
             se = rse.self_energy(z)
             se = se[all_idx, :][:, all_idx]
-            edge_coupling[i,j, :] = se[N//2, N//2-5:N//2+5]
+            if kind == "zigzag":
+                edge_coupling[i,j, :] = se[N//2, N//2-kNN//2:N//2+kNN//2]
+            elif kind == "armchair":
+                edge_coupling[i,j, :] = se[N, N-kNN//2:N+kNN//2]
+                
             
             se = np.imag(se)
             se_diag = np.diag(se)
             onsite_edge_center[i, j] = se_diag[N//2] # sorted to that the first N are on the same edge -- N//2 is the atom center most on first edge
     
-    print(f"\n### Done. Will save to {out_file}")
+    print(f"\n### Done. Will save to {out_file}.npz")
     return onsite_edge_center, edge_coupling, tiles, energies
 
 if __name__ == "__main__":
