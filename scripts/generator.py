@@ -1,6 +1,6 @@
 import numpy as np
 import sisl
-from sisl import Hamiltonian
+from sisl import Hamiltonian, geom
 from tqdm.auto import tqdm
 
 from scipy import linalg
@@ -50,7 +50,7 @@ def calc_ldos(G):
 
 #%% generate system and LDOS
 def systemInit(bond=1.43, t=-2.7):
-    graphene = sisl.geom.graphene(bond)
+    graphene = geom.graphene(bond)
     Ham0 = Hamiltonian(graphene)
     r = (0.1*bond, bond+1e-2)
     t = (0.0, t)
@@ -93,13 +93,13 @@ def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3):
         If either the number of `tile` is not a integer or the elements of the `tile`-tuple cannot be interpreted as integers.
     """
     
-    if isinstance(tile, (int, float, np.int16, np.int32, np.int64)): 
+    if isinstance(tile, (int, float, np.integer)): 
         Na = Nb = int(tile)
     elif isinstance(tile, (tuple, list)):
+        if len(tile) != 2:
+            raise ValueError(f"tile must be a 2-elemtn sequence, got {tile!r}")
         try:
-            Na, Nb = tile
-            Na = int(Na)
-            Nb = int(Nb)
+            Na, Nb = int(tile[0]), int(tile[1])
         except Exception:
             raise ValueError(f"Invalid tile input: {tile} with elements of type {type(tile[0])}, and {type(tile[1])}")
     else:
