@@ -33,6 +33,7 @@ def main():
         "eta": ETA,
         "E": ENERGIES,
         }
+    
     OUTPUTS= {}
     diffs = np.empty(shape=(len(LIST_OF_N), ), dtype=complex)
     for i, N in enumerate(tqdm(LIST_OF_N, desc="Looping over size")):
@@ -43,7 +44,7 @@ def main():
         out = calculate_spectral_GF(energies=ENERGIES, eta=ETA, Ham_sub=H_final, rse=rse, alist=atoms_idxs, elist=electrode_idxs)
         OUTPUTS[f"{N}"] = out
         
-        rse_re = out["RSE"]
+        rse_re = out["RSE_re"]
         rse_diag = np.diagonal(rse_re, axis1=1, axis2=2).copy()
         rse_diff, = rse_diag[E0_idx, n0] - rse_diag[E0_idx, n_halfway_side]
         diffs[i] = rse_diff
@@ -62,7 +63,8 @@ def main():
 if __name__ == "__main__":
     results = main()
     print("Calculations done! output has keys:\n {}".format(results.keys()))
-    filename = OUTDIR / f"ldos-conv-NN.npz"
+    filename = OUTDIR / f"{Path(__file__).stem}-ldos-NN.npz"
+    print(f"saving output to file : {filename}")
     np.savez(filename, **results)
 # # %%
 # print(out.keys())
