@@ -57,7 +57,7 @@ def systemInit(bond=1.43, t=-2.7):
     Ham0.construct([r, t])
     return Ham0
 
-def setup_ham_rse(Ham, tile=4, nk1=100, eta=1e-3):
+def setup_ham_rse(Ham, tile=4, nk1=100, eta : float | complex =1e-3):
     """Setup Hamiltonian and real-space self-energy for system
 
     Parameters
