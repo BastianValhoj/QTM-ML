@@ -103,3 +103,20 @@ def all_armchair(bond=1.42):
     gr = gr.sub(sort_idx)
     gr.set_nsc([3,3,1])
     return gr
+
+
+def make_edge(geom, N0, N1):
+    
+    grev = geom.copy()
+    grev.cell[0] = -geom.cell[0]
+    grev.cell[1] = -geom.cell[1]
+    grBottom = geom.tile(N0-1, 0)
+    grRight = geom.tile(N1-1, 1).translate((N0-1)*geom.cell[0])
+    grTop = grev.tile(N0-1, 0)\
+        .translate((N1-1)*geom.cell[1])\
+        .translate((N0-1)*geom.cell[0])
+    grLeft = grev.tile(N1-1, 1).translate((N1-1)*geom.cell[1])
+    grtot = grBottom + grRight + grTop + grLeft
+    grtot.cell[0] = geom.cell[0]*N0
+    grtot.cell[1] = geom.cell[1]*N1
+    return grtot
