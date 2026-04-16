@@ -131,3 +131,26 @@ def extrapolate(g1, g2, tiles1, tiles2, na=6, NC=1):
             corner_parts[4],
         ])
     return g1_to_g2_idx
+
+
+def rsse_to_edge(rsse, edge):
+    if not hasattr(rsse, 'xyz'):
+        raise AttributeError("`rsse` must have .xyz attribute")
+    if not hasattr(edge, 'xyz'):
+        raise AttributeError("`edge` must have .xyz attribute")
+        
+    # the coords available to target
+    tree = cKDTree(edge.xyz)
+    
+    # what to match
+    dd, ii = tree.query(rsse.xyz, k=1)
+    
+    return ii
+
+def rsse_mapping(rsse1, rsse2, geom1, geom2, tiles1, tiles2, na=6, NC=1):
+    edge1_to_rsse1 = {int(edgeidx):int(rsseidx) for rsseidx, edgeidx  in enumerate(rsse_to_edge(rsse1, geom1))}
+    rsse2_to_edge2 = {int(rsseidx):int(edgeidx) for rsseidx, edgeidx in enumerate(rsse_to_edge(rsse2, geom2))}
+
+    # convert the g2edge index to the g1edge index
+    edge2_to_edge1 = {int(g2idx):int(g1idx) for g2idx, g1idx in enumerate(extrapolate(geom1, geom2, tiles1, tiles2, na=na, NC=NC))}
+    return rsse2_to_edge2, edge2_to_edge1, edge1_to_rsse1
