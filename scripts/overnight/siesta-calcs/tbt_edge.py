@@ -16,6 +16,9 @@ else:
     Nw = DEFAULT_NW
 
 file_dir = Path(__file__).parent
+#print("file_dir")
+#print(f"{file_dir.}")
+#print(f"{file_dir!r}")
 
 # load geom parameters from JSON file
 with open(file_dir.parent / 'geom_params.json', 'r') as file:
@@ -125,7 +128,7 @@ for lab in labels:
     HamNN.write(out_path / 'H_dev.nc')
 
     fdf = make_fdf(label=lab,
-            path=out_path,
+            path=out_path.relative_to(file_dir),
             ksamp=ksamp,
             bloch=bloch,
             semi_axis=semi_axis,
