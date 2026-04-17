@@ -49,11 +49,11 @@ echo "Removing old *.TBT.nc files"
 rm -f $ARM_DIR/*.TBT.nc $ARM_DIR/*.SE.nc $ZIG_DIR/*.TBT.nc $ZIG_DIR/*.SE.nc
 
 echo "-------------------------------------------------"
-echo "## Check progress with: tail -f <armchair|zigzag>.log"
+echo "## Check progress with: tail -f <armchair|zigzag>.Nw$NW_PARAM.log"
 echo "-------------------------------------------------"
 
 echo "Launching Armchair"
-mpirun -np $NP_PARAM tbtrans < $ARM_DIR/RUNTBT.fdf > armchair.log 2>&1
+mpirun -np $NP_PARAM tbtrans < $ARM_DIR/RUNTBT.fdf > armchair.Nw$NW_PARAM.log 2>&1
 #PID_ARM=$!
 echo "Armchair calculations finished."
 
@@ -61,7 +61,7 @@ echo "Armchair calculations finished."
 
 # 3. Start the zig-zag calculations in the background
 echo "Launching Zig-zag"
-mpirun -np $NP_PARAM tbtrans < $ZIG_DIR/RUNTBT.fdf > zigzag.log 2>&1
+mpirun -np $NP_PARAM tbtrans < $ZIG_DIR/RUNTBT.fdf > zigzag.Nw$NW_PARAM.log 2>&1
 #PID_ZIG=$!
 echo "Zig-zag calculations finished."
 
