@@ -147,10 +147,17 @@ def rsse_to_edge(rsse, edge):
     
     return ii
 
-def rsse_mapping(rsse1, rsse2, geom1, geom2, tiles1, tiles2, na=6, NC=1):
+def rsse_mapping(rsse1, rsse2, geom1, geom2, tiles1, tiles2, na=6, NC=1, *, ret_parts=False):
     edge1_to_rsse1 = {int(edgeidx):int(rsseidx) for rsseidx, edgeidx  in enumerate(rsse_to_edge(rsse1, geom1))}
     rsse2_to_edge2 = {int(rsseidx):int(edgeidx) for rsseidx, edgeidx in enumerate(rsse_to_edge(rsse2, geom2))}
 
     # convert the g2edge index to the g1edge index
     edge2_to_edge1 = {int(g2idx):int(g1idx) for g2idx, g1idx in enumerate(extrapolate(geom1, geom2, tiles1, tiles2, na=na, NC=NC))}
-    return rsse2_to_edge2, edge2_to_edge1, edge1_to_rsse1
+    if ret_parts:
+        return rsse2_to_edge2, edge2_to_edge1, edge1_to_rsse1
+    else:
+        keys = rsse2_to_edge2.keys()
+        values = [edge1_to_rsse1[edge2_to_edge1[rsse2_to_edge2[key]]] 
+                  for key in keys
+                  ]
+        return {int(k):int(val) for k,val in zip(keys,values)}
