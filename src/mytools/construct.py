@@ -1,6 +1,7 @@
 
 import numpy as np
 import sisl
+from sisl.typing import GeometryLike
 
 
 # rotation matrices
@@ -39,7 +40,7 @@ def sort_atoms(geom, order='xzy', atol=1e-2):
     idxs = np.lexsort([xyz[:, axes[0]], xyz[:, axes[1]], xyz[:, axes[2]]])
     return idxs
 
-def make_device(bond=1.42, kind="armchair"):
+def make_device(bond=1.42, kind="armchair") -> GeometryLike:
     """Create a-NGR or z-NGR unitcell for tiling
     """
     gr = sisl.geom.graphene(bond=bond, atoms="C", orthogonal=True) # returns *orthogonal* unitcell instead of primitive
@@ -59,7 +60,7 @@ def make_device(bond=1.42, kind="armchair"):
         gr = gr.sub(idxs)
         return gr
 
-def all_armchair(bond=1.42):
+def all_armchair(bond=1.42) -> sisl.Geometry:
     """create a graphene 2D layer having armchair edges all around.
     The regular method is `sisl.geom.graphene(bond)` returns a graphene layer of all zig-zag edges
 
@@ -105,7 +106,7 @@ def all_armchair(bond=1.42):
     return gr
 
 
-def make_edge(geom, N0, N1):
+def make_edge(geom, N0, N1) -> sisl.Geometry:
     
     grev = geom.copy()
     grev.cell[0] = -geom.cell[0]
