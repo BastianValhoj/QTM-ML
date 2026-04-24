@@ -1,3 +1,10 @@
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "marimo>=0.23.2",
+# ]
+# ///
+
 import marimo
 
 __generated_with = "0.23.2"
@@ -9,13 +16,16 @@ def _():
     import sisl 
     import numpy as np
     from tqdm.auto import tqdm
-    from pathlib import Path
 
     from mytools.construct import all_armchair, make_edge
     from mytools.scalingv2 import extrapolate, rsse_mapping
 
     import matplotlib.pyplot as plt
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
     import marimo as mo
+
+    from pathlib import Path
+    import os
 
     from typing import cast, Tuple, Dict, List, Any
 
@@ -26,14 +36,60 @@ def _():
         Tuple,
         all_armchair,
         cast,
+        make_axes_locatable,
         make_edge,
         mo,
         np,
+        os,
         plt,
         rsse_mapping,
         sisl,
         tqdm,
     )
+
+
+@app.cell
+def _(Path):
+    script_dir = Path(__file__).parent.absolute()
+    rsse_out_dir = script_dir / "rsse"
+    rsse_out_dir.mkdir(parents=True, exist_ok=True)
+    return (rsse_out_dir,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Make checkbox (✅) for recomputing RSSE's
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    recompute_rsse_collection = mo.ui.checkbox(value=False, label="Recompute RSSEs")
+    return (recompute_rsse_collection,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Allow for using recompute when running as a script
+    """)
+    return
+
+
+@app.cell
+def _(os, recompute_rsse_collection):
+    force_recompute_env: bool = os.getenv("RECOMPUTE", "false").lower() == "true"
+
+    should_recompute: bool = recompute_rsse_collection.value or force_recompute_env
+    return (should_recompute,)
+
+
+@app.cell
+def _(recompute_rsse_collection):
+    recompute_rsse_collection
+    return
 
 
 @app.cell
@@ -190,11 +246,12 @@ def _(
     Ham_NN_big: "sisl.Hamiltonian",
     Ham_NN_small: "sisl.Hamiltonian",
     as_ham,
+    sub_idx_big,
     sub_idx_small,
 ):
     Ham_reorder_small = as_ham(Ham_NN_small.sub(sub_idx_small))
-    Ham_reorder_big = as_ham(Ham_NN_big.sub(sub_idx_small))
-    return
+    Ham_reorder_big = as_ham(Ham_NN_big.sub(sub_idx_big))
+    return Ham_reorder_big, Ham_reorder_small
 
 
 @app.cell
@@ -213,7 +270,7 @@ def _(Ham_NN_big: "sisl.Hamiltonian", Ham_NN_small: "sisl.Hamiltonian", cast):
 
 @app.cell
 def _(np):
-    emax: float = 0.5
+    emax: float = 1.
     emin: float = -emax
     estep = 0.1
     energies = np.arange(emin, emax, estep)
@@ -221,11 +278,9 @@ def _(np):
 
 
 @app.cell
-def _(Path, mo):
-    rsse_out_dir = Path("./rsse")
-    recompute_rsse_collection = mo.ui.checkbox(value=False, label="Recompute RSSEs")
+def _(recompute_rsse_collection):
     recompute_rsse_collection
-    return recompute_rsse_collection, rsse_out_dir
+    return
 
 
 @app.cell
@@ -234,15 +289,15 @@ def _(
     as_ndarray,
     energies,
     np,
-    recompute_rsse_collection,
     rsse_big,
     rsse_out_dir,
+    should_recompute: bool,
     sub_idx_big,
     total_atoms_big: int,
     tqdm,
 ):
     _filename = f"calculate_rsse_N{N_big}"
-    if recompute_rsse_collection.value is True:
+    if should_recompute is True:
         rsse_collection_big = np.zeros((energies.shape[0], total_atoms_big, total_atoms_big), dtype=complex)
         for _i, _E in enumerate(tqdm(energies, desc="Geometry: Big")):
             # print(i)
@@ -261,15 +316,15 @@ def _(
     as_ndarray,
     energies,
     np,
-    recompute_rsse_collection,
     rsse_out_dir,
     rsse_small,
+    should_recompute: bool,
     sub_idx_small,
     total_atoms_small: int,
     tqdm,
 ):
     _filename =  f"calculate_rsse_N{N_small}"
-    if recompute_rsse_collection.value is True:
+    if should_recompute is True:
         rsse_collection_small = np.zeros((energies.shape[0], total_atoms_small, total_atoms_small), dtype=complex)
         for _i, _E in enumerate(tqdm(energies, desc="Geometry: Small")):
             _rsse = rsse_small.self_energy(_E)
@@ -297,7 +352,7 @@ def _(
     big_to_small_idx = rsse_mapping(Ham_elec_small, Ham_elec_big, geom_edge_small, geom_edge_big, N_small, N_big, Ham0.na, NC)
     big_to_small_idx = cast(dict[int, int], big_to_small_idx)
     mapped_indices = list(big_to_small_idx.values())
-    return big_to_small_idx, mapped_indices
+    return (mapped_indices,)
 
 
 @app.cell
@@ -318,6 +373,8 @@ def _(
     elec_idx_big,
     elec_idx_small,
     energies,
+    make_axes_locatable,
+    np,
     plt,
     rsse_collection_big,
     rsse_collection_extrapolation,
@@ -325,21 +382,179 @@ def _(
 ):
     _eidx = len(energies) // 2
 
-    fig, axes = plt.subplots(1,3)
-    for i, lab in enumerate(["Small", "Extrapol", "Big"]):
-        axes[i].set(title=lab)
+    _fig, _axes = plt.subplots(1,3)
+    for _i, _lab in enumerate(["Small", "Extrapol", "Big"]):
+        _axes[_i].set(title=_lab)
 
-    axes[0].imshow(rsse_collection_small[_eidx, :len(elec_idx_small), :len(elec_idx_small)].imag)
-    axes[1].imshow(rsse_collection_extrapolation[_eidx, :len(elec_idx_big), :len(elec_idx_big)].imag)
-    axes[2].imshow(rsse_collection_big[_eidx, :len(elec_idx_big), :len(elec_idx_big)].imag)
+    _cmap = "RdBu"
+    _vmax: float = np.max([np.abs(rsse_collection_small[_eidx, :len(elec_idx_small), :len(elec_idx_small)].imag).max(), np.abs(rsse_collection_big[_eidx, :len(elec_idx_big), :len(elec_idx_big)].imag).max(), np.abs(rsse_collection_extrapolation[_eidx, :len(elec_idx_big), :len(elec_idx_big)].imag).max()])
+    _vmin: float = -_vmax
 
+    _axes[0].imshow(rsse_collection_small[_eidx, :len(elec_idx_small), :len(elec_idx_small)].imag, cmap=_cmap, vmin=_vmin, vmax=_vmax)
+    _axes[1].imshow(rsse_collection_extrapolation[_eidx, :len(elec_idx_big), :len(elec_idx_big)].imag, cmap=_cmap, vmin=_vmin, vmax=_vmax)
+    _sc = _axes[2].imshow(rsse_collection_big[_eidx, :len(elec_idx_big), :len(elec_idx_big)].imag, cmap=_cmap, vmin=_vmin, vmax=_vmax)
+
+    _divider = make_axes_locatable(_axes[2])
+    _cax = _divider.append_axes("right", size="5%", pad=0.1)
+    _fig.colorbar(_sc, _cax)
+    plt.show()
     return
 
 
 @app.cell
-def _(big_to_small_idx, energies, np, rsse_collection_small):
+def _(Ham_reorder_big, Ham_reorder_small):
+    Hk_small = Ham_reorder_small.Hk(format="array")
+    Sk_small = Ham_reorder_small.Sk(format="array")
+
+    Hk_big = Ham_reorder_big.Hk(format="array")
+    Sk_big = Ham_reorder_big.Sk(format="array")
+    return Hk_big, Hk_small, Sk_big, Sk_small
+
+
+@app.cell
+def _(Hk_small, Sk_small, energies, eta, np, rsse_collection_small):
+    invGF_small = (energies[:, None, None] + eta*1j)*Sk_small[None, :, :] - Hk_small[None, :, :] - rsse_collection_small
+    GF_small = np.linalg.inv(invGF_small)
+
+    ldos_small = (-1/np.pi)*np.imag(np.diagonal(GF_small, axis1=1, axis2=2))
+    dos_small = ldos_small.sum(axis=-1)
+    return (dos_small,)
+
+
+@app.cell
+def _(Ham_reorder_big, Ham_reorder_small):
+    print(Ham_reorder_big.na, Ham_reorder_small.na)
+    return
+
+
+@app.cell
+def _(Hk_big, Sk_big, energies, eta, np, rsse_collection_big):
+    invGF_big = (energies[:, None, None] + eta*1j)*Sk_big[None, :, :] - Hk_big[None, :, :] - rsse_collection_big
+    GF_big = np.linalg.inv(invGF_big)
+
+    ldos_big = (-1/np.pi)*np.imag(np.diagonal(GF_big, axis1=1, axis2=2))
+    dos_big = ldos_big.sum(axis=-1)
+    return (dos_big,)
+
+
+@app.cell
+def _(Hk_big, Sk_big, energies, eta, np, rsse_collection_extrapolation):
+    invGF_extrapolation = (energies[:, None, None] + eta*1j)*Sk_big[None, :, :] - Hk_big[None, :, :] - rsse_collection_extrapolation
+    GF_extrapolation = np.linalg.inv(invGF_extrapolation)
+
+    ldos_extrapolation= (-1/np.pi)*np.imag(np.diagonal(GF_extrapolation, axis1=1, axis2=2))
+    dos_extrapolation = ldos_extrapolation.sum(axis=-1)
+    return (dos_extrapolation,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Purely extrapolation solution
+    """)
+    return
+
+
+@app.cell
+def _(dos_big, dos_extrapolation, dos_small, energies, plt):
     _eidx = len(energies) // 2
-    rsse_collection_small[np.ix_([_eidx], list(big_to_small_idx.values()), list(big_to_small_idx.values()))].squeeze()
+
+    _fig, _axes = plt.subplots(1, 2, sharey=True)
+
+    for _ax, _lab in zip(_axes, ["Small", "Extra + Big"]):
+        _ax.grid()
+        _ax.set(
+            title=_lab,
+            # ylabel="$E$ [eV]",
+            xlabel="DOS")
+    _axes[0].set_ylabel("$E$ [eV]")
+    _axes[0].plot(dos_small, energies, color="royalblue")
+    _axes[1].plot(dos_extrapolation, energies, linestyle="--", color="crimson", label="Extrapolation")
+    _axes[1].plot(dos_big, energies, linestyle="-", color="royalblue", label="Big")
+    _axes[1].legend(loc="center right")
+    _fig.get_constrained_layout()
+    plt.show()
+    return
+
+
+@app.cell
+def _(Ham_reorder_big, Ham_reorder_small, elec_idx_big, elec_idx_small):
+    diff_small = Ham_reorder_small.xyz[:len(elec_idx_small), None, :] - Ham_reorder_small.xyz[None, :len(elec_idx_small), :]
+    diff_big = Ham_reorder_big.xyz[:len(elec_idx_big), None, :] - Ham_reorder_big.xyz[None, :len(elec_idx_big), :]
+    return diff_big, diff_small
+
+
+@app.cell
+def _(diff_big, diff_small, np):
+    dist_small = np.linalg.norm(diff_small, axis=-1)  # (N_small, N_small)
+    dist_big   = np.linalg.norm(diff_big,   axis=-1)  # (N_big,   N_big)
+    return dist_big, dist_small
+
+
+@app.cell
+def _(dist_small):
+    max_dist_small = dist_small.max(axis=-1)
+    # max_dist_big = dist_big.max(axis=-1)
+    return (max_dist_small,)
+
+
+@app.cell
+def _(dist_big, mapped_indices, max_dist_small):
+    dist_mask = dist_big > max_dist_small[mapped_indices]
+    return (dist_mask,)
+
+
+@app.cell
+def _(dist_mask, elec_idx_big, np, rsse_collection_extrapolation):
+    elec_block = rsse_collection_extrapolation[:, :len(elec_idx_big), :len(elec_idx_big)]
+    rsse_collection_extrapolation_corrected = rsse_collection_extrapolation.copy()
+    rsse_collection_extrapolation_corrected[:, :len(elec_idx_big), :len(elec_idx_big)] = np.where(dist_mask, 0.0, elec_block)
+    return (rsse_collection_extrapolation_corrected,)
+
+
+@app.cell
+def _(
+    Hk_big,
+    Sk_big,
+    energies,
+    eta,
+    np,
+    rsse_collection_extrapolation_corrected,
+):
+    invGF_corrected = (energies[:, None, None] + eta*1j)*Sk_big[None, :, :] - Hk_big[None, :, :] - rsse_collection_extrapolation_corrected
+    GF_corrected = np.linalg.inv(invGF_corrected)
+
+    ldos_corrected = (-1/np.pi)*np.imag(np.diagonal(GF_corrected, axis1=1, axis2=2))
+    dos_corrected = ldos_corrected.sum(axis=-1)
+    return (dos_corrected,)
+
+
+@app.cell
+def _(dos_big, dos_corrected, dos_extrapolation, dos_small, energies, plt):
+    _eidx = len(energies) // 2
+
+    _fig, _axes = plt.subplots(1, 2, sharey=True)
+
+    for _ax, _lab in zip(_axes, ["Small", "Extra + Big"]):
+        _ax.grid()
+        _ax.set(
+            title=_lab,
+            # ylabel="$E$ [eV]",
+            xlabel="DOS")
+    _axes[0].set_ylabel("$E$ [eV]")
+    _axes[0].plot(dos_small, energies, color="royalblue")
+    _axes[1].plot(dos_extrapolation, energies, linestyle="--", color="crimson", label="Extrapolation")
+    _axes[1].plot(dos_corrected, energies, linestyle="-.", color="darkgreen", label="Corrected")
+    _axes[1].plot(dos_big, energies, linestyle="-", color="royalblue", label="Big")
+    _axes[1].legend(loc="center right")
+    _fig.get_constrained_layout()
+
+    plt.show()
+    return
+
+
+@app.cell
+def _():
     return
 
 
