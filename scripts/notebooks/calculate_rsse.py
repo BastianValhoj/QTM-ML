@@ -1,18 +1,9 @@
-# /// script
-# requires-python = ">=3.13"
-# dependencies = [
-#     "marimo>=0.23.2",
-# ]
-# ///
-
 import marimo
 
 __generated_with = "0.23.2"
-app = marimo.App()
+app = marimo.App(width="medium")
 
-
-@app.cell
-def _():
+with app.setup:
     import sisl 
     import numpy as np
     from tqdm.auto import tqdm
@@ -29,27 +20,9 @@ def _():
 
     from typing import cast, Tuple, Dict, List, Any
 
-    return (
-        Any,
-        Dict,
-        Path,
-        Tuple,
-        all_armchair,
-        cast,
-        make_axes_locatable,
-        make_edge,
-        mo,
-        np,
-        os,
-        plt,
-        rsse_mapping,
-        sisl,
-        tqdm,
-    )
-
 
 @app.cell
-def _(Path):
+def _():
     script_dir = Path(__file__).parent.absolute()
     rsse_out_dir = script_dir / "rsse"
     rsse_out_dir.mkdir(parents=True, exist_ok=True)
@@ -57,7 +30,7 @@ def _(Path):
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _():
     mo.md(r"""
     # Make checkbox (✅) for recomputing RSSE's
     """)
@@ -65,13 +38,13 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
+def _():
     recompute_rsse_collection = mo.ui.checkbox(value=False, label="Recompute RSSEs")
     return (recompute_rsse_collection,)
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _():
     mo.md(r"""
     # Allow for using recompute when running as a script
     """)
@@ -79,7 +52,7 @@ def _(mo):
 
 
 @app.cell
-def _(os, recompute_rsse_collection):
+def _(recompute_rsse_collection):
     force_recompute_env: bool = os.getenv("RECOMPUTE", "false").lower() == "true"
 
     should_recompute: bool = recompute_rsse_collection.value or force_recompute_env
@@ -87,13 +60,7 @@ def _(os, recompute_rsse_collection):
 
 
 @app.cell
-def _(recompute_rsse_collection):
-    recompute_rsse_collection
-    return
-
-
-@app.cell
-def _(cast, np, sisl):
+def _():
     def as_geom(obj) -> sisl.Geometry:
         return cast(sisl.Geometry, obj)
 
@@ -111,7 +78,13 @@ def _(cast, np, sisl):
 
 
 @app.cell
-def _(np):
+def _(recompute_rsse_collection):
+    recompute_rsse_collection
+    return
+
+
+@app.cell
+def _():
     bond_length: float= 1.42
     bond_angle: float = np.pi/3
     inner_radius: float = bond_length*np.cos(bond_angle/2)
@@ -138,45 +111,36 @@ def _(np):
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _():
     mo.md(r"""
     ## helper functions
     """)
     return
 
 
-@app.cell
-def _(Any, Dict, Tuple, np, sisl):
-    # will sub the hamiltonian to order the electrode indices first
-    def resub_ham(
-        rsse: sisl.RealSpaceSE
-        ) -> Tuple[sisl.Hamiltonian, Dict[str, Any]]:
-        Ham_rs, elec_idx = rsse.real_space_coupling(ret_indices=True)
-        Ham_NN = rsse.real_space_parent()
-        all_idx = np.arange(Ham_NN.na)
-        device_idx = np.delete(all_idx, elec_idx)
-        sub_idx = np.concat([elec_idx, device_idx])
-        Ham_NN_re = Ham_NN.sub(sub_idx)
+@app.function
+# will sub the hamiltonian to order the electrode indices first
+def resub_ham(
+    rsse: sisl.RealSpaceSE
+    ) -> Tuple[sisl.Hamiltonian, Dict[str, Any]]:
+    Ham_rs, elec_idx = rsse.real_space_coupling(ret_indices=True)
+    Ham_NN = rsse.real_space_parent()
+    all_idx = np.arange(Ham_NN.na)
+    device_idx = np.delete(all_idx, elec_idx)
+    sub_idx = np.concat([elec_idx, device_idx])
+    Ham_NN_re = Ham_NN.sub(sub_idx)
 
-        out = {
-            "H_elec": Ham_rs,
-            "elec_idx": elec_idx,
-            "sub_idx": sub_idx,
-            "total_atoms": Ham_NN_re.na,
-        }
-        return Ham_NN_re, out
-
-    return
+    out = {
+        "H_elec": Ham_rs,
+        "elec_idx": elec_idx,
+        "sub_idx": sub_idx,
+        "total_atoms": Ham_NN_re.na,
+    }
+    return Ham_NN_re, out
 
 
 @app.cell
-def _(
-    all_armchair,
-    bond_length: float,
-    hopping_dist: tuple[float, float],
-    hopping_term,
-    sisl,
-):
+def _(bond_length: float, hopping_dist: tuple[float, float], hopping_term):
     graphene_cell: sisl.Geometry = all_armchair(bond=bond_length)
 
     Ham0 = sisl.Hamiltonian(geometry=graphene_cell)
@@ -185,7 +149,7 @@ def _(
 
 
 @app.cell
-def _(Ham0, N_big, N_small, eta, num_k, sisl):
+def _(Ham0, N_big, N_small, eta, num_k):
     rsse_small = sisl.RealSpaceSE(Ham0, 0, 1, (N_small, N_small, 1))
     rsse_small.setup(eta=eta, bz=sisl.MonkhorstPack(Ham0, [1, num_k, 1]))
 
@@ -207,7 +171,7 @@ def _(as_ham, as_ndarray, rsse_big, rsse_small):
 
 
 @app.cell
-def _(as_ham, rsse_big, rsse_small, sisl):
+def _(as_ham, rsse_big, rsse_small):
     Ham_NN_small: sisl.Hamiltonian = rsse_small.real_space_parent()
     Ham_NN_big: sisl.Hamiltonian = rsse_big.real_space_parent()
     Ham_NN_small = as_ham(Ham_NN_small)
@@ -217,10 +181,9 @@ def _(as_ham, rsse_big, rsse_small, sisl):
 
 @app.cell
 def _(
-    Ham_NN_big: "sisl.Hamiltonian",
-    Ham_NN_small: "sisl.Hamiltonian",
+    Ham_NN_big: sisl.Hamiltonian,
+    Ham_NN_small: sisl.Hamiltonian,
     as_ndarray,
-    np,
 ):
     all_idx_small = as_ndarray(np.arange(Ham_NN_small.na))
     all_idx_big = as_ndarray(np.arange(Ham_NN_big.na))
@@ -228,14 +191,14 @@ def _(
 
 
 @app.cell
-def _(all_idx_big, all_idx_small, elec_idx_big, elec_idx_small, np):
+def _(all_idx_big, all_idx_small, elec_idx_big, elec_idx_small):
     device_idx_small = np.delete(all_idx_small, elec_idx_small)
     device_idx_big = np.delete(all_idx_big, elec_idx_big)
     return device_idx_big, device_idx_small
 
 
 @app.cell
-def _(device_idx_big, device_idx_small, elec_idx_big, elec_idx_small, np):
+def _(device_idx_big, device_idx_small, elec_idx_big, elec_idx_small):
     sub_idx_small = np.concat([elec_idx_small, device_idx_small])
     sub_idx_big = np.concat([elec_idx_big, device_idx_big])
     return sub_idx_big, sub_idx_small
@@ -243,8 +206,8 @@ def _(device_idx_big, device_idx_small, elec_idx_big, elec_idx_small, np):
 
 @app.cell
 def _(
-    Ham_NN_big: "sisl.Hamiltonian",
-    Ham_NN_small: "sisl.Hamiltonian",
+    Ham_NN_big: sisl.Hamiltonian,
+    Ham_NN_small: sisl.Hamiltonian,
     as_ham,
     sub_idx_big,
     sub_idx_small,
@@ -255,21 +218,21 @@ def _(
 
 
 @app.cell
-def _(N_big, N_small, as_geom, graphene_cell: "sisl.Geometry", make_edge):
+def _(N_big, N_small, as_geom, graphene_cell: sisl.Geometry):
     geom_edge_small = as_geom(make_edge(graphene_cell, N_small, N_small))
     geom_edge_big = as_geom(make_edge(graphene_cell, N_big, N_big))
     return geom_edge_big, geom_edge_small
 
 
 @app.cell
-def _(Ham_NN_big: "sisl.Hamiltonian", Ham_NN_small: "sisl.Hamiltonian", cast):
+def _(Ham_NN_big: sisl.Hamiltonian, Ham_NN_small: sisl.Hamiltonian):
     total_atoms_small: int = cast(int, Ham_NN_small.na)
     total_atoms_big: int = cast(int, Ham_NN_big.na)
     return total_atoms_big, total_atoms_small
 
 
 @app.cell
-def _(np):
+def _():
     emax: float = 1.
     emin: float = -emax
     estep = 0.1
@@ -288,13 +251,11 @@ def _(
     N_big,
     as_ndarray,
     energies,
-    np,
     rsse_big,
     rsse_out_dir,
     should_recompute: bool,
     sub_idx_big,
     total_atoms_big: int,
-    tqdm,
 ):
     _filename = f"calculate_rsse_N{N_big}"
     if should_recompute is True:
@@ -315,13 +276,11 @@ def _(
     N_small,
     as_ndarray,
     energies,
-    np,
     rsse_out_dir,
     rsse_small,
     should_recompute: bool,
     sub_idx_small,
     total_atoms_small: int,
-    tqdm,
 ):
     _filename =  f"calculate_rsse_N{N_small}"
     if should_recompute is True:
@@ -344,10 +303,8 @@ def _(
     NC,
     N_big,
     N_small,
-    cast,
     geom_edge_big,
     geom_edge_small,
-    rsse_mapping,
 ):
     big_to_small_idx = rsse_mapping(Ham_elec_small, Ham_elec_big, geom_edge_small, geom_edge_big, N_small, N_big, Ham0.na, NC)
     big_to_small_idx = cast(dict[int, int], big_to_small_idx)
@@ -359,7 +316,6 @@ def _(
 def _(
     elec_idx_big,
     mapped_indices,
-    np,
     rsse_collection_big,
     rsse_collection_small,
 ):
@@ -373,9 +329,6 @@ def _(
     elec_idx_big,
     elec_idx_small,
     energies,
-    make_axes_locatable,
-    np,
-    plt,
     rsse_collection_big,
     rsse_collection_extrapolation,
     rsse_collection_small,
@@ -412,13 +365,13 @@ def _(Ham_reorder_big, Ham_reorder_small):
 
 
 @app.cell
-def _(Hk_small, Sk_small, energies, eta, np, rsse_collection_small):
+def _(Hk_small, Sk_small, energies, eta, rsse_collection_small):
     invGF_small = (energies[:, None, None] + eta*1j)*Sk_small[None, :, :] - Hk_small[None, :, :] - rsse_collection_small
     GF_small = np.linalg.inv(invGF_small)
 
     ldos_small = (-1/np.pi)*np.imag(np.diagonal(GF_small, axis1=1, axis2=2))
     dos_small = ldos_small.sum(axis=-1)
-    return (dos_small,)
+    return GF_small, dos_small
 
 
 @app.cell
@@ -427,28 +380,44 @@ def _(Ham_reorder_big, Ham_reorder_small):
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## calculate GF for `small` and `big`
+    """)
+    return
+
+
 @app.cell
-def _(Hk_big, Sk_big, energies, eta, np, rsse_collection_big):
+def _(Hk_big, Sk_big, energies, eta, rsse_collection_big):
     invGF_big = (energies[:, None, None] + eta*1j)*Sk_big[None, :, :] - Hk_big[None, :, :] - rsse_collection_big
     GF_big = np.linalg.inv(invGF_big)
+    return (GF_big,)
 
+
+@app.cell
+def _(GF_big):
     ldos_big = (-1/np.pi)*np.imag(np.diagonal(GF_big, axis1=1, axis2=2))
     dos_big = ldos_big.sum(axis=-1)
     return (dos_big,)
 
 
 @app.cell
-def _(Hk_big, Sk_big, energies, eta, np, rsse_collection_extrapolation):
+def _(Hk_big, Sk_big, energies, eta, rsse_collection_extrapolation):
     invGF_extrapolation = (energies[:, None, None] + eta*1j)*Sk_big[None, :, :] - Hk_big[None, :, :] - rsse_collection_extrapolation
     GF_extrapolation = np.linalg.inv(invGF_extrapolation)
+    return (GF_extrapolation,)
 
+
+@app.cell
+def _(GF_extrapolation):
     ldos_extrapolation= (-1/np.pi)*np.imag(np.diagonal(GF_extrapolation, axis1=1, axis2=2))
     dos_extrapolation = ldos_extrapolation.sum(axis=-1)
     return (dos_extrapolation,)
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _():
     mo.md(r"""
     # Purely extrapolation solution
     """)
@@ -456,7 +425,7 @@ def _(mo):
 
 
 @app.cell
-def _(dos_big, dos_extrapolation, dos_small, energies, plt):
+def _(dos_big, dos_extrapolation, dos_small, energies):
     _eidx = len(energies) // 2
 
     _fig, _axes = plt.subplots(1, 2, sharey=True)
@@ -468,12 +437,28 @@ def _(dos_big, dos_extrapolation, dos_small, energies, plt):
             # ylabel="$E$ [eV]",
             xlabel="DOS")
     _axes[0].set_ylabel("$E$ [eV]")
-    _axes[0].plot(dos_small, energies, color="royalblue")
+    _axes[0].plot(dos_small, energies, color="k")
     _axes[1].plot(dos_extrapolation, energies, linestyle="--", color="crimson", label="Extrapolation")
-    _axes[1].plot(dos_big, energies, linestyle="-", color="royalblue", label="Big")
+    _axes[1].plot(dos_big, energies, linestyle="-", color="k", label="Big")
     _axes[1].legend(loc="center right")
     _fig.get_constrained_layout()
     plt.show()
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Ensure Positive (semi-) definiteness
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## find distances in small structure
+    """)
     return
 
 
@@ -485,7 +470,7 @@ def _(Ham_reorder_big, Ham_reorder_small, elec_idx_big, elec_idx_small):
 
 
 @app.cell
-def _(diff_big, diff_small, np):
+def _(diff_big, diff_small):
     dist_small = np.linalg.norm(diff_small, axis=-1)  # (N_small, N_small)
     dist_big   = np.linalg.norm(diff_big,   axis=-1)  # (N_big,   N_big)
     return dist_big, dist_small
@@ -498,6 +483,14 @@ def _(dist_small):
     return (max_dist_small,)
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### Create mask where distance in `big` is larger than what the inhereted indices are in `small`
+    """)
+    return
+
+
 @app.cell
 def _(dist_big, mapped_indices, max_dist_small):
     dist_mask = dist_big > max_dist_small[mapped_indices]
@@ -505,7 +498,7 @@ def _(dist_big, mapped_indices, max_dist_small):
 
 
 @app.cell
-def _(dist_mask, elec_idx_big, np, rsse_collection_extrapolation):
+def _(dist_mask, elec_idx_big, rsse_collection_extrapolation):
     elec_block = rsse_collection_extrapolation[:, :len(elec_idx_big), :len(elec_idx_big)]
     rsse_collection_extrapolation_corrected = rsse_collection_extrapolation.copy()
     rsse_collection_extrapolation_corrected[:, :len(elec_idx_big), :len(elec_idx_big)] = np.where(dist_mask, 0.0, elec_block)
@@ -513,27 +506,24 @@ def _(dist_mask, elec_idx_big, np, rsse_collection_extrapolation):
 
 
 @app.cell
-def _(
-    Hk_big,
-    Sk_big,
-    energies,
-    eta,
-    np,
-    rsse_collection_extrapolation_corrected,
-):
+def _(Hk_big, Sk_big, energies, eta, rsse_collection_extrapolation_corrected):
     invGF_corrected = (energies[:, None, None] + eta*1j)*Sk_big[None, :, :] - Hk_big[None, :, :] - rsse_collection_extrapolation_corrected
     GF_corrected = np.linalg.inv(invGF_corrected)
+    return (GF_corrected,)
 
+
+@app.cell
+def _(GF_corrected):
     ldos_corrected = (-1/np.pi)*np.imag(np.diagonal(GF_corrected, axis1=1, axis2=2))
     dos_corrected = ldos_corrected.sum(axis=-1)
     return (dos_corrected,)
 
 
 @app.cell
-def _(dos_big, dos_corrected, dos_extrapolation, dos_small, energies, plt):
+def _(dos_big, dos_corrected, dos_extrapolation, dos_small, energies):
     _eidx = len(energies) // 2
 
-    _fig, _axes = plt.subplots(1, 2, sharey=True)
+    _fig, _axes = plt.subplots(1, 2, sharey=True, figsize=(8,4))
 
     for _ax, _lab in zip(_axes, ["Small", "Extra + Big"]):
         _ax.grid()
@@ -542,10 +532,10 @@ def _(dos_big, dos_corrected, dos_extrapolation, dos_small, energies, plt):
             # ylabel="$E$ [eV]",
             xlabel="DOS")
     _axes[0].set_ylabel("$E$ [eV]")
-    _axes[0].plot(dos_small, energies, color="royalblue")
+    _axes[0].plot(dos_small, energies, color="k")
     _axes[1].plot(dos_extrapolation, energies, linestyle="--", color="crimson", label="Extrapolation")
-    _axes[1].plot(dos_corrected, energies, linestyle="-.", color="darkgreen", label="Corrected")
-    _axes[1].plot(dos_big, energies, linestyle="-", color="royalblue", label="Big")
+    _axes[1].plot(dos_corrected, energies, linestyle="-.", color="royalblue", label="Distance corrected")
+    _axes[1].plot(dos_big, energies, linestyle="-", color="k", label="Big")
     _axes[1].legend(loc="center right")
     _fig.get_constrained_layout()
 
@@ -553,8 +543,122 @@ def _(dos_big, dos_corrected, dos_extrapolation, dos_small, energies, plt):
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Verify that the spectral function is positive (semi-) definite
+    """)
+    return
+
+
 @app.cell
 def _():
+    psd_tol = -1e-12 # slighly negative because numerical artifacts
+    return (psd_tol,)
+
+
+@app.function
+def dag(arr):
+    return np.conjugate(np.swapaxes(arr, axis1=1, axis2=2))
+
+
+@app.cell
+def _():
+    #### Check small structure
+    return
+
+
+@app.cell
+def _(GF_small, rsse_collection_small):
+    broadening_small = -2*np.imag(rsse_collection_small)
+    spectral_small = GF_small @ broadening_small @ dag(GF_small)
+    return (spectral_small,)
+
+
+@app.cell
+def _(energies, psd_tol, spectral_small):
+    _eigvals, _ = np.linalg.eigh(spectral_small)
+    _mask = np.any(_eigvals > psd_tol, axis=1)
+    print("## Small structure:")
+    print("For each energy: are all eigenvalues positive or (close to) zero")
+    print(f"{"":<2}E{"":<3} {"Bool"}")
+    for _i, _bool in enumerate(_mask):
+        print(f"{energies[_i]:>4.1f} : {_bool}") 
+    return
+
+
+@app.cell
+def _(GF_extrapolation, rsse_collection_extrapolation):
+    broadening_extrapolation = -2*np.imag(rsse_collection_extrapolation)
+    spectral_extrapolation = GF_extrapolation @ broadening_extrapolation @ dag(GF_extrapolation)
+    return (spectral_extrapolation,)
+
+
+@app.cell
+def _(energies, psd_tol, spectral_extrapolation):
+    _eigvals, _ = np.linalg.eigh(spectral_extrapolation)
+    _mask = np.any(_eigvals > psd_tol, axis=1)
+    print("## Extrapolated structure:")
+    print("For each energy: are all eigenvalues positive or (close to) zero")
+    print(f"{"":<2}E{"":<3} {"Bool"}")
+    for _i, _bool in enumerate(_mask):
+        print(f"{energies[_i]:>4.1f} : {_bool}") 
+    return
+
+
+@app.cell
+def _(GF_corrected, rsse_collection_extrapolation_corrected):
+    broadening_extrapolation_corrected = -2*np.imag(rsse_collection_extrapolation_corrected)
+    spectral_extrapolation_corrected = GF_corrected @ broadening_extrapolation_corrected @ dag(GF_corrected)
+    return broadening_extrapolation_corrected, spectral_extrapolation_corrected
+
+
+@app.cell
+def _(energies, psd_tol, spectral_extrapolation_corrected):
+    eigvals = np.linalg.eigvalsh(spectral_extrapolation_corrected)
+    violation_mask = np.any(eigvals > psd_tol, axis=1)
+    print("## Extrapolation (distance corrected) structure:")
+    print("For each energy: are all eigenvalues positive or (close ot) zero")
+    print(f"{"":<2}E{"":<3} {"Bool"}")
+    for _i, _bool in enumerate(violation_mask == False):
+        print(f"{energies[_i]:>4.1f} : {_bool}") 
+    return (violation_mask,)
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ### Identify problems with broadening matrix
+    """)
+    return
+
+
+@app.cell
+def _(violation_mask):
+    # Identify energy indices where the tolerance is exceeded
+    # We look for values LESS than psd_tol (e.g., -1e-10 is worse than -1e-12)
+    # violation_mask = np.any(eigvals < psd_tol, axis=1)
+    violating_energies_idx = np.where(violation_mask)[0]
+
+    print(f"Violations found at {len(violating_energies_idx)} energy points.")
+    return (violating_energies_idx,)
+
+
+@app.cell
+def _(broadening_extrapolation_corrected, violating_energies_idx):
+    # Check the eigenvalues of the broadening matrix itself
+    gamma_eigvals = np.linalg.eigvalsh(broadening_extrapolation_corrected)
+
+    # Find the indices of the atoms/orbitals contributing to the negative eigenvalues
+    # at the first violating energy point
+    idx_e = violating_energies_idx[0]
+    bad_gamma_eigs = gamma_eigvals[idx_e]
+    return (bad_gamma_eigs,)
+
+
+@app.cell
+def _(bad_gamma_eigs):
+    bad_gamma_eigs
     return
 
 
