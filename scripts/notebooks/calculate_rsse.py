@@ -26,7 +26,7 @@ def _():
     script_dir = Path(__file__).parent.absolute()
     rsse_out_dir = script_dir / "rsse"
     rsse_out_dir.mkdir(parents=True, exist_ok=True)
-    return (rsse_out_dir,)
+    return rsse_out_dir, script_dir
 
 
 @app.cell(hide_code=True)
@@ -91,7 +91,7 @@ def _():
 
     N0 = 4
     N_small = 6
-    N_big = 11
+    N_big = 13
     NC = 1
     hopping_dist: tuple[float, float] = (0.1, bond_length+1e-2)
     hopping_term = (0.0, -2.7)
@@ -146,6 +146,26 @@ def _(bond_length: float, hopping_dist: tuple[float, float], hopping_term):
     Ham0 = sisl.Hamiltonian(geometry=graphene_cell)
     Ham0.construct(func=[hopping_dist, hopping_term])
     return Ham0, graphene_cell
+
+
+@app.cell
+def _(Ham0, script_dir):
+    Ham0.write(script_dir / "Ham0.nc")
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
+def _():
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+
+    comm.bcast
+    return
 
 
 @app.cell
@@ -371,7 +391,7 @@ def _(Hk_small, Sk_small, energies, eta, rsse_collection_small):
 
     ldos_small = (-1/np.pi)*np.imag(np.diagonal(GF_small, axis1=1, axis2=2))
     dos_small = ldos_small.sum(axis=-1)
-    return GF_small, dos_small
+    return GF_small, dos_small, ldos_small
 
 
 @app.cell
@@ -413,7 +433,7 @@ def _(Hk_big, Sk_big, energies, eta, rsse_collection_extrapolation):
 def _(GF_extrapolation):
     ldos_extrapolation= (-1/np.pi)*np.imag(np.diagonal(GF_extrapolation, axis1=1, axis2=2))
     dos_extrapolation = ldos_extrapolation.sum(axis=-1)
-    return (dos_extrapolation,)
+    return dos_extrapolation, ldos_extrapolation
 
 
 @app.cell(hide_code=True)
@@ -516,7 +536,7 @@ def _(Hk_big, Sk_big, energies, eta, rsse_collection_extrapolation_corrected):
 def _(GF_corrected):
     ldos_corrected = (-1/np.pi)*np.imag(np.diagonal(GF_corrected, axis1=1, axis2=2))
     dos_corrected = ldos_corrected.sum(axis=-1)
-    return (dos_corrected,)
+    return dos_corrected, ldos_corrected
 
 
 @app.cell
@@ -562,9 +582,11 @@ def dag(arr):
     return np.conjugate(np.swapaxes(arr, axis1=1, axis2=2))
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
-    #### Check small structure
+    mo.md(r"""
+    ## Check small structure
+    """)
     return
 
 
@@ -578,9 +600,9 @@ def _(GF_small, rsse_collection_small):
 @app.cell
 def _(energies, psd_tol, spectral_small):
     _eigvals, _ = np.linalg.eigh(spectral_small)
-    _mask = np.any(_eigvals > psd_tol, axis=1)
+    _mask = np.any(_eigvals < psd_tol, axis=1)
     print("## Small structure:")
-    print("For each energy: are all eigenvalues positive or (close to) zero")
+    print(f"For each energy: are any eigenvalues < {psd_tol:.1e}")
     print(f"{"":<2}E{"":<3} {"Bool"}")
     for _i, _bool in enumerate(_mask):
         print(f"{energies[_i]:>4.1f} : {_bool}") 
@@ -597,9 +619,9 @@ def _(GF_extrapolation, rsse_collection_extrapolation):
 @app.cell
 def _(energies, psd_tol, spectral_extrapolation):
     _eigvals, _ = np.linalg.eigh(spectral_extrapolation)
-    _mask = np.any(_eigvals > psd_tol, axis=1)
+    _mask = np.any(_eigvals < psd_tol, axis=1)
     print("## Extrapolated structure:")
-    print("For each energy: are all eigenvalues positive or (close to) zero")
+    print(f"For each energy: are any eigenvalues < {psd_tol:.1e}")
     print(f"{"":<2}E{"":<3} {"Bool"}")
     for _i, _bool in enumerate(_mask):
         print(f"{energies[_i]:>4.1f} : {_bool}") 
@@ -610,18 +632,20 @@ def _(energies, psd_tol, spectral_extrapolation):
 def _(GF_corrected, rsse_collection_extrapolation_corrected):
     broadening_extrapolation_corrected = -2*np.imag(rsse_collection_extrapolation_corrected)
     spectral_extrapolation_corrected = GF_corrected @ broadening_extrapolation_corrected @ dag(GF_corrected)
-    return broadening_extrapolation_corrected, spectral_extrapolation_corrected
+    return (spectral_extrapolation_corrected,)
 
 
 @app.cell
 def _(energies, psd_tol, spectral_extrapolation_corrected):
     eigvals = np.linalg.eigvalsh(spectral_extrapolation_corrected)
-    violation_mask = np.any(eigvals > psd_tol, axis=1)
+    violation_mask = np.any(eigvals < psd_tol, axis=1)
     print("## Extrapolation (distance corrected) structure:")
-    print("For each energy: are all eigenvalues positive or (close ot) zero")
+    print(f"For each energy: are any eigenvalues < {psd_tol:.1e}")
     print(f"{"":<2}E{"":<3} {"Bool"}")
-    for _i, _bool in enumerate(violation_mask == False):
+    for _i, _bool in enumerate(violation_mask):
         print(f"{energies[_i]:>4.1f} : {_bool}") 
+
+    print(eigvals)
     return (violation_mask,)
 
 
@@ -634,31 +658,197 @@ def _():
 
 
 @app.cell
-def _(violation_mask):
-    # Identify energy indices where the tolerance is exceeded
-    # We look for values LESS than psd_tol (e.g., -1e-10 is worse than -1e-12)
-    # violation_mask = np.any(eigvals < psd_tol, axis=1)
-    violating_energies_idx = np.where(violation_mask)[0]
+def _(elec_idx_big, psd_tol, spectral_extrapolation_corrected, violation_mask):
+    problematic_pairs = {} # keyed by energy index
 
-    print(f"Violations found at {len(violating_energies_idx)} energy points.")
-    return (violating_energies_idx,)
+    for _eidx in np.where(violation_mask)[0]:
+
+        _A = spectral_extrapolation_corrected[_eidx]
+        _eigvals, _eigvecs = np.linalg.eigh(_A)
+
+        _negative_mask = _eigvals < psd_tol
+
+        # Eigenvectors corresponding to negative eigenvalues
+        if not np.any(_negative_mask): # if non are below tol --> continue to next _eidx
+            continue
+
+        _Vneg = _eigvecs[:, _negative_mask]
+
+        # Contribution of each (i,j) element to the negativity:
+        # The violation comes from v^† A v < 0, i.e. the (i,j) elements
+        # weighted by outer products of the bad eigenvectors
+        _projection = _Vneg @ _Vneg.conj().T  # (N, N) — responsibility matrix
+
+
+        # Restrict to the electrode block
+        _proj_elec = np.abs(_projection[:len(elec_idx_big), :len(elec_idx_big)])
+        # Rank pairs by their contribution to the negative subspace
+        _i, _j = np.unravel_index(np.argsort(-_proj_elec.ravel()), _proj_elec.shape)
+
+        problematic_pairs[_eidx] = {
+            "eigenvalues": _eigvals[_negative_mask],
+            "top_pairs": list(zip(_i[:10], _j[:10])),  # top 10 offenders
+            "projection_matrix": _proj_elec,
+        }
+    return (problematic_pairs,)
 
 
 @app.cell
-def _(broadening_extrapolation_corrected, violating_energies_idx):
-    # Check the eigenvalues of the broadening matrix itself
-    gamma_eigvals = np.linalg.eigvalsh(broadening_extrapolation_corrected)
-
-    # Find the indices of the atoms/orbitals contributing to the negative eigenvalues
-    # at the first violating energy point
-    idx_e = violating_energies_idx[0]
-    bad_gamma_eigs = gamma_eigvals[idx_e]
-    return (bad_gamma_eigs,)
+def _(energies, problematic_pairs, rsse_collection_extrapolation_corrected):
+    # Report
+    for _eidx, _info in problematic_pairs.items():
+        print(f"\nE = {energies[_eidx]:.1f} eV")
+        # print(f"  Negative eigenvalues: {_info['eigenvalues']}")
+        print(f"  Top contributing (i,j) pairs in electrode block:")
+        for _i, _j in _info["top_pairs"]:
+            _sigma_val = rsse_collection_extrapolation_corrected[_eidx, _i, _j]
+            print(f"    ({_i:3d}, {_j:3d})  |projection| = {_info['projection_matrix'][_i, _j]:.4f}  Σ = {_sigma_val:.4e}")
+    return
 
 
 @app.cell
-def _(bad_gamma_eigs):
-    bad_gamma_eigs
+def _(rsse_collection_extrapolation_corrected):
+    def enforce_psd_rsse(rsse_collection):
+        """
+        Enforce PSD of the spectral density by projecting Γ = -2 Im(Σ)
+        onto the nearest PSD matrix, then recovering Σ.
+
+        Keeps Re(Σ) untouched — only the imaginary part is corrected.
+        """
+        rsse_psd = rsse_collection.copy()
+        num_E = rsse_collection.shape[0]
+
+        for e_idx in range(num_E):
+            Sigma = rsse_collection[e_idx]
+
+            # Broadening matrix
+            Gamma = -2 * np.imag(Sigma)
+
+            # Project to nearest PSD: clip negative eigenvalues to 0
+            eigvals, eigvecs = np.linalg.eigh(Gamma)
+            Gamma_psd = eigvecs @ np.diag(np.maximum(eigvals, 0.0)) @ eigvecs.conj().T
+
+            # Recover corrected Σ: keep Re(Σ), replace Im(Σ)
+            rsse_psd[e_idx] = np.real(Sigma) - 1j * Gamma_psd / 2
+
+        return rsse_psd
+
+
+    rsse_extrapolation_psd = enforce_psd_rsse(rsse_collection_extrapolation_corrected)
+    return (rsse_extrapolation_psd,)
+
+
+@app.cell
+def _(Hk_big, Sk_big, energies, eta, rsse_extrapolation_psd):
+    invGF_corrected_psd = (energies[:, None, None] + eta*1j)*Sk_big[None, :, :] - Hk_big[None, :, :] - rsse_extrapolation_psd
+    GF_corrected_psd = np.linalg.inv(invGF_corrected_psd)
+    return (GF_corrected_psd,)
+
+
+@app.cell
+def _(GF_corrected_psd, rsse_extrapolation_psd):
+    broadening_psd = -2 * np.imag(rsse_extrapolation_psd)
+    spectral_psd = GF_corrected_psd @ broadening_psd @ dag(GF_corrected_psd)
+    return (spectral_psd,)
+
+
+@app.cell
+def _(energies, psd_tol, spectral_psd):
+    _eigvals = np.linalg.eigvalsh(spectral_psd)
+    _mask = np.any(_eigvals < psd_tol, axis=1)
+    print("## Extrapolation (distance corrected + force PSD) structure:")
+    print(f"For each energy: are any eigenvalues < {psd_tol:.1e}")
+    print(f"{"":<2}E{"":<3} {"Bool"}")
+    for _i, _bool in enumerate(_mask):
+        print(f"{energies[_i]:>4.1f} : {_bool}") 
+
+
+    print(_eigvals)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Plot forced PSD
+    """)
+    return
+
+
+@app.cell
+def _(GF_corrected_psd):
+    ldos_psd = (-1/np.pi)*np.diagonal(GF_corrected_psd.imag, axis1=1, axis2=2)
+    dos_psd = ldos_psd.sum(axis=-1)
+    dos_psd
+    return dos_psd, ldos_psd
+
+
+@app.cell
+def _():
+    show_dist_corrected = mo.ui.checkbox(value=True, label="Show Dist corrected")
+    show_extrapolation = mo.ui.checkbox(value=True, label="Show extrapolation")
+    show_dist_psd = mo.ui.checkbox(value=True, label="Show dist + psd")
+    mo.md(f"""### Choose which plots to include in the comparison plot
+    {show_extrapolation}
+    {show_dist_corrected}
+    {show_dist_psd}
+    """)
+    return show_dist_corrected, show_dist_psd, show_extrapolation
+
+
+@app.cell
+def _(
+    Ham_reorder_small,
+    dos_big,
+    dos_corrected,
+    dos_extrapolation,
+    dos_psd,
+    dos_small,
+    energies,
+    ldos_corrected,
+    ldos_extrapolation,
+    ldos_psd,
+    ldos_small,
+    show_dist_corrected,
+    show_dist_psd,
+    show_extrapolation,
+):
+    _eidx = len(energies) // 2
+    _site_lille = np.min(np.linalg.norm(Ham_reorder_small.center() - Ham_reorder_small.xyz))
+    print(_site_lille)
+
+    _fig, _axes = plt.subplots(2, 2, sharey=True, figsize=(12,6))
+
+    for _ax, _lab in zip(_axes[0,:], ["Small", "Big"]):
+        _ax.grid()
+        _ax.set(
+            title=_lab,
+            # ylabel="$E$ [eV]",
+            xlabel="DOS")
+
+    _axes[0,0].set_ylabel("$E$ [eV]")
+    _axes[0,0].plot(dos_small, energies, color="k")
+    _axes[1,0].plot(ldos_small[:, _site], energies, color="k")
+    if show_extrapolation.value:
+        _axes[0,1].plot(dos_extrapolation, energies, linestyle="--", color="crimson", label="Extrapolation")
+        _axes[1,1].plot(ldos_extrapolation[:, _site], linestyle="--", color="crimson", label="Extrapolation")
+
+    if show_dist_corrected.value:
+        _axes[0,1].plot(dos_corrected, energies, linestyle="-.", color="royalblue", label="Distance corrected")
+        _axes[1,1].plot(ldos_corrected[:, _site], energies, linestyle="-.", color="royalblue", label="Distance corrected")
+    if show_dist_psd.value:
+        _axes[0,1].plot(dos_psd, energies, linestyle=":", color="darkorange", label="Dist + force PSD")
+        _axes[1,1].plot(ldos_psd[:, _site], energies, linestyle=":", color="darkorange", label="Dist + force PSD")
+    _axes[0,1].plot(dos_big, energies, linestyle="-", color="k", label="Big")
+    _axes[0,1].legend(loc="center right")
+    _fig.get_constrained_layout()
+
+    plt.show()
+    return
+
+
+@app.cell
+def _():
     return
 
 
