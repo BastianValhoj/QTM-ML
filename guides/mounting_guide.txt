@@ -1,0 +1,11 @@
+# A simple tutorial to mount a ssh drive to transfer files from local PC to e.g. HPC
+
+Ensure that `sshfs` is installed.
+
+
+1) Make directory like :
+	$mkdir ~path/to/local/dir/hpc
+2) mount the remote HPC directory :
+	$sshfs <id>@<node>:/path/to/remote/dir/location ~/path/to/local/dir/hpc
+
+Where <id> is the user id for the node, and <node> is the login node (e.g.login.gbar.dtu.dk)
