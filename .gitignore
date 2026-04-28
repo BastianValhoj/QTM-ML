@@ -262,7 +262,9 @@ meeting_notes/*
 **/time.json
 **/siesta-cal
 
+# ignore directories of purely siesta input/outputs (large binaries)
 **/TBT-Nw*
+**/TBT_1elec-Nw5
 
 # 3. EXCEPTIONS: Files we want to keep even if they match patterns above
 !*.fdf
