@@ -263,8 +263,11 @@ meeting_notes/*
 **/siesta-cal
 
 # ignore directories of purely siesta input/outputs (large binaries)
-**/TBT_1elec-Nw*
+**/TBT_1elec*
 **/TBT-Nw*
+**/test_siesta_output
+
+
 
 # 3. EXCEPTIONS: Files we want to keep even if they match patterns above
 !*.fdf
