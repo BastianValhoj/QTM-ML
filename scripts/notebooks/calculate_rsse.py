@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.2"
+__generated_with = "0.23.3"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -151,20 +151,6 @@ def _(bond_length: float, hopping_dist: tuple[float, float], hopping_term):
 @app.cell
 def _(Ham0, script_dir):
     Ham0.write(script_dir / "Ham0.nc")
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-
-    comm.bcast
     return
 
 
@@ -330,6 +316,37 @@ def _(
     big_to_small_idx = cast(dict[int, int], big_to_small_idx)
     mapped_indices = list(big_to_small_idx.values())
     return (mapped_indices,)
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    #### testing indices:
+    """)
+    return
+
+
+@app.cell
+def _(
+    Ham0,
+    Ham_elec_big,
+    Ham_elec_small,
+    NC,
+    N_big,
+    N_small,
+    geom_edge_big,
+    geom_edge_small,
+):
+    _parts = rsse_mapping(Ham_elec_small, Ham_elec_big, geom_edge_small, geom_edge_big, N_small, N_big, Ham0.na, NC, ret_parts=True)
+    _rsse2_to_edge2 = _parts[0]
+    _edge2_to_edge1 = _parts[1]
+    _edge1_to_rsse1 = _parts[2]
+    _val =  14
+    print(f"{_val}")
+    print(f"  --> {_rsse2_to_edge2[_val]}")
+    print(f"        --> {_edge2_to_edge1[_rsse2_to_edge2[_val]]}")
+    print(f"              --> {_edge1_to_rsse1[_edge2_to_edge1[_rsse2_to_edge2[_val]]]}")
+    return
 
 
 @app.cell
@@ -506,7 +523,7 @@ def _(dist_small):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### Create mask where distance in `big` is larger than what the inhereted indices are in `small`
+    ### Create mask where distance in **`big`** is larger than what the inhereted indices are in **`small`**
     """)
     return
 
