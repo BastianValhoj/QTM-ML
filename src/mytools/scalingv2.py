@@ -138,6 +138,9 @@ def rsse_to_edge(rsse, edge):
         raise AttributeError("`rsse` must have .xyz attribute")
     if not hasattr(edge, 'xyz'):
         raise AttributeError("`edge` must have .xyz attribute")
+    
+    if edge.na < rsse.na:
+        raise AssertionError("Make sure that the edge has at least the same amount of atoms as rsse")
         
     # the coords available to target
     tree = cKDTree(edge.xyz)
