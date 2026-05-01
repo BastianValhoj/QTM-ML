@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial import cKDTree
+import sisl
 
 def get_fractional(geometry, coords=None):
     """Map Cartesion coordinates to fractional coordinates, 
@@ -133,7 +134,8 @@ def extrapolate(g1, g2, tiles1, tiles2, na=6, NC=1):
     return g1_to_g2_idx
 
 
-def rsse_to_edge(rsse, edge):
+def rsse_to_edge(rsse: sisl.Hamiltonian,
+                 edge: sisl.Geometry) -> np.ndarray:
     if not hasattr(rsse, 'xyz'):
         raise AttributeError("`rsse` must have .xyz attribute")
     if not hasattr(edge, 'xyz'):
@@ -150,7 +152,17 @@ def rsse_to_edge(rsse, edge):
     
     return ii
 
-def rsse_mapping(rsse1, rsse2, geom1, geom2, tiles1, tiles2, na=6, NC=1, *, ret_parts=False):
+def rsse_mapping(rsse1 : sisl.Hamiltonian, 
+                 rsse2 : sisl.Hamiltonian, 
+                 geom1 : sisl.Geometry, 
+                 geom2 : sisl.Geometry, 
+                 tiles1 : int | tuple[int, int], 
+                 tiles2 : int | tuple[int, int],
+                 na=6, 
+                 NC=1, 
+                 *, 
+                 ret_parts=False
+                 ) -> dict[int, int] | tuple[dict[int, int], dict[int, int], dict[int, int]]:
     edge1_to_rsse1 = {int(edgeidx):int(rsseidx) for rsseidx, edgeidx  in enumerate(rsse_to_edge(rsse1, geom1))}
     rsse2_to_edge2 = {int(rsseidx):int(edgeidx) for rsseidx, edgeidx in enumerate(rsse_to_edge(rsse2, geom2))}
 
