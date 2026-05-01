@@ -234,7 +234,7 @@ def main():
     Ham_re_big.write(OUTPUT_DIR / "Ham_re_big.nc") # device Hamiltonian for `big`
     Ham_re_small.write(OUTPUT_DIR / "Ham_re_small.nc") # device Hamiltonian for `small`
     with sisl.io.tbtgfSileTBtrans(OUTPUT_DIR / "RSSE.TBTGF") as f:
-        bz = sisl.MonkhorstPack(Ham_elec_big, [1, NK1(N_BIG), 1])
+        bz = sisl.MonkhorstPack(Ham0, [1, NK1(N_BIG), 1])
         f.write_header(bz, ENERGIES + 1j*ETA)
         for ispin, new_k, k, E in tqdm(f, unit="RSSE"):
             # tqdm.write(f"ispin={ispin}, new_k={new_k}, k={k}, E={E}")
