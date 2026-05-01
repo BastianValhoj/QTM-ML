@@ -107,7 +107,8 @@ def all_armchair(bond=1.42) -> sisl.Geometry:
 
 
 def make_edge(geom, N0, N1) -> sisl.Geometry:
-    
+    if hasattr(geom, "geometry"):
+        geom = geom.geometry
     grev = geom.copy()
     grev.cell[0] = -geom.cell[0]
     grev.cell[1] = -geom.cell[1]
