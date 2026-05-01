@@ -4,7 +4,7 @@ import numpy as np
 from ase.visualize import view
 from ase.visualize.plot import plot_atoms
 from scipy.spatial import cKDTree
-from scipy.linalg import block_diag
+from scipy.linalg import block_diag, lu_factor, lu_solve
 
 
 
@@ -71,6 +71,13 @@ def geometry_complement(big, small, tol=1e-6, check_Z=False):
     idx_remove = match_atoms_by_xyz(big, small, tol=tol, check_Z=check_Z)
     idx_keep = np.setdiff1d(np.arange(big.na), idx_remove)
     return big.sub(idx_keep), idx_remove, idx_keep
+
+
+def get_center_atoms(g,R):  # select atoms within R of the center of the structure
+    r0 = g.center()
+    dR = np.linalg.norm(r0 - g.xyz, axis=1)
+    sel = np.nonzero(dR<R)[0]
+    return sel 
 
 
 def plotxy(geom):
@@ -396,3 +403,83 @@ def find_most_similar_atom_environment(s1, s2, i1, R=5.0, return_details=False):
         'best_env_score':   float(env_score[order[0]]),
         'R': float(R),
     }
+
+
+def projected_inverse_block(a, proj_indices):
+    """Return the inverse sub-block a^{-1}[P, P] without forming all of a^{-1}.
+
+    Parameters
+    ----------
+    a : array_like, shape (n, n)
+        Matrix to invert.
+    proj_indices : array_like, shape (m,)
+        Indices defining the projection region P.
+
+    Returns
+    -------
+    np.ndarray, shape (m, m)
+        The Green's-function block corresponding to the projection region.
+
+    Notes
+    -----
+    This still factorizes the full matrix ``a`` once, so the asymptotic cost
+    remains O(n^3). However, it avoids constructing the full inverse and only
+    solves for the columns needed in the projection region, which often reduces
+    memory use substantially and can be faster when ``m << n``.
+    """
+    a = np.asarray(a)
+    proj_indices = np.asarray(proj_indices, dtype=int)
+
+    if a.ndim != 2 or a.shape[0] != a.shape[1]:
+        raise ValueError('a must be a square 2D matrix')
+    if proj_indices.ndim != 1:
+        raise ValueError('proj_indices must be a 1D index array')
+
+    n = a.shape[0]
+    if np.any(proj_indices < 0) or np.any(proj_indices >= n):
+        raise IndexError('proj_indices contains out-of-bounds entries')
+
+    lu, piv = lu_factor(a)
+    rhs = np.eye(n, dtype=a.dtype)[:, proj_indices]
+    inv_cols = lu_solve((lu, piv), rhs)
+    return inv_cols[proj_indices, :]
+
+
+def get_gf1to2_proj(e, rsse1, map12, no_rsse2, h2, eta, rs_elec_indices2, proj_indices):
+    """Projected version of the notebook's ``getGF1to2`` workflow.
+
+    Parameters
+    ----------
+    e : complex or float
+        Energy point.
+    rsse1 : object
+        Object providing ``self_energy(e, bulk=True, coupling=True)``.
+    map12 : scipy.sparse matrix or compatible operator
+        Mapping from the RSSE1 self-energy to the RSSE2 basis.
+    no_rsse2 : int
+        Number of atoms/orbitals in the RSSE2 subspace used to reshape Map12's
+        result back into a square matrix.
+    h2 : sisl.Hamiltonian-like object
+        Object providing ``Sk()`` and ``Hk()``.
+    eta : float
+        Broadening used in ``e - 1j * eta``.
+    rs_elec_indices2 : array_like
+        Indices where the extrapolated self-energy should be inserted.
+    proj_indices : array_like
+        Indices of the region whose Green's-function block is required.
+
+    Returns
+    -------
+    np.ndarray
+        ``GF[np.ix_(proj_indices, proj_indices)]`` without constructing the
+        full dense inverse.
+    """
+    se_hse1 = rsse1.self_energy(e, bulk=True, coupling=True)
+    se_hse2 = (map12 @ se_hse1.ravel()).reshape(no_rsse2, no_rsse2)
+
+    inv_gf = h2.Sk() * (e - 1j * eta) - h2.Hk()
+    inv_gf = np.asarray(inv_gf.todense())
+    rs_elec_indices2 = np.asarray(rs_elec_indices2, dtype=int)
+    inv_gf[np.ix_(rs_elec_indices2, rs_elec_indices2)] = se_hse2
+
+    return projected_inverse_block(inv_gf, proj_indices)
