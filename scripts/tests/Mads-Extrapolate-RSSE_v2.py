@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.4"
+__generated_with = "0.23.3"
 app = marimo.App()
 
 
@@ -42,9 +42,9 @@ def _():
 
 @app.cell
 def _():
-    from MyTools import match_atoms_by_xyz
+    from MyTools import match_atoms_by_xyz, plot_with_numbers
 
-    return (match_atoms_by_xyz,)
+    return match_atoms_by_xyz, plot_with_numbers
 
 
 @app.cell(hide_code=True)
@@ -141,7 +141,7 @@ def _(mo):
 @app.cell
 def _(np):
     N1 = 9; N2 = 12;
-    Emin = -3.;Emax=3; dE=0.1; eta = 0.01
+    Emin = -0.5;Emax=1; dE=0.1; eta = 0.01
     En = np.arange(Emin, Emax, dE)
     return En, N1, N2, eta
 
@@ -471,15 +471,15 @@ def _(En, centeratoms, getGF2, np, tqdm):
 
 
 @app.cell
-def _():
-    # dos2 = np.array([-np.trace(getGF2(e)).imag/(H2.na*np.pi) for e in tqdm(En)]) # dos per atom
-    return
+def _(En, H2, getGF2, np, tqdm):
+    dos2 = np.array([-np.trace(getGF2(e)).imag/(H2.na*np.pi) for e in tqdm(En)]) # dos per atom
+    return (dos2,)
 
 
 @app.cell
-def _(En, dos2sel, plt):
+def _(En, dos2, dos2sel, plt):
     plt.plot(En,dos2sel,'o')
-    # plt.plot(En,dos2)
+    plt.plot(En,dos2)
     return
 
 
@@ -538,6 +538,12 @@ def _(n1, n2):
 
 
 @app.cell
+def _(g1rsse):
+    print(g1rsse.cell)
+    return
+
+
+@app.cell
 def _(MatchPair2to1, cKDTree, g1rsse, g2rsse, np, tqdm):
     from scipy.sparse import coo_matrix
     MaxRange = g1rsse.cell[0, 0]
@@ -574,23 +580,23 @@ def _(MatchPair2to1, cKDTree, g1rsse, g2rsse, np, tqdm):
                     cols.append(k1)
                     data.append(w)
         print(len(rows), len(cols), len(data))
-        return (rows, cols, data)
+        # return (rows, cols, data)
         return coo_matrix((data, (rows, cols)), shape=(n2 * n2, n1 * n1)).tocsr()
-    ro, co, da = build_operator_average(g1rsse, g2rsse)
-    #rint("Sparse map   ping elements: ", Map12.nnz)
+    # ro, co, da = build_operator_average(g1rsse, g2rsse)
     Map12 = build_operator_average(g1rsse, g2rsse)
-    return Map12, co, ro
+    print("Sparse map   ping elements: ", Map12.nnz)
+    return (Map12,)
 
 
 @app.cell
-def _(co, ro):
-    max(co),max(ro)
+def _(Map12):
+    print(Map12)
     return
 
 
 @app.cell
-def _(co, plt):
-    plt.plot(co)
+def _():
+    # plt.plot(co)
     return
 
 
@@ -606,14 +612,14 @@ def _(Map12, RSSE1, no_rsse2, np):
 
 
 @app.cell
-def _(SeHSE1, SeHSE2, g1rsse, np, plt):
-    def plot_M_dist(geom,M):
+def _(SeHSE1, SeHSE2, g1rsse, g2rsse, np, plt):
+    def plot_M_dist(geom, M):
         xyz = geom.xyz
         d = xyz[np.newaxis, :, :] - xyz[:, np.newaxis, :]
         dR = np.linalg.norm(d, axis=2).flatten()
-        plt.scatter(dR,M.imag.flatten())
         print(np.max(np.abs(M)))
-    plot_M_dist(g1rsse,SeHSE1);plot_M_dist(g1rsse,SeHSE2);
+        return plt.scatter(dR,M.imag.flatten())
+    plot_M_dist(g1rsse,SeHSE1); plot_M_dist(g2rsse,SeHSE2)
     return
 
 
