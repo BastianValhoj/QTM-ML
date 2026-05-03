@@ -16,8 +16,8 @@ ESTEP = 0.1
 ENERGIES = np.arange(EMIN, EMAX+ESTEP, ESTEP).round(3)
 NUM_ENERGIES = len(ENERGIES)
 
-N_SMALL = 6
-N_BIG = 12
+N_SMALL = 10
+N_BIG = 20
 NC = 1
 ETA = 1e-3
 NK1 = lambda N: int(np.ceil(1200/N))

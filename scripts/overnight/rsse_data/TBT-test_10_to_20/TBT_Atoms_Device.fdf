@@ -1,0 +1,50 @@
+%block TBT.Atoms.Device
+  atom 301
+  atom 303
+  atom [305 -- 307]
+  atom 309
+  atom [311 -- 331]
+  atom 333
+  atom 337
+  atom 405
+  atom 407
+  atom [409 -- 455]
+  atom 457
+  atom 459
+  atom 511
+  atom [514 -- 575]
+  atom 577
+  atom 621
+  atom [623 -- 695]
+  atom 731
+  atom [733 -- 811]
+  atom 841
+  atom [843 -- 927]
+  atom [953 -- 1041]
+  atom [1064 -- 1156]
+  atom [1177 -- 1269]
+  atom [1290 -- 1382]
+  atom [1403 -- 1495]
+  atom [1518 -- 1606]
+  atom [1632 -- 1716]
+  atom 1718
+  atom [1748 -- 1826]
+  atom 1828
+  atom [1864 -- 1936]
+  atom 1938
+  atom 1982
+  atom [1984 -- 2045]
+  atom 2048
+  atom 2100
+  atom 2102
+  atom [2104 -- 2150]
+  atom 2152
+  atom 2154
+  atom 2222
+  atom 2226
+  atom [2228 -- 2248]
+  atom 2250
+  atom [2252 -- 2254]
+  atom 2256
+  atom 2258
+%endblock
