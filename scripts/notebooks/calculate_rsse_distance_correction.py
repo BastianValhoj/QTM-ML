@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.4"
+__generated_with = "0.23.5"
 app = marimo.App(width="full")
 
 with app.setup:
@@ -47,7 +47,7 @@ def _(script_dir):
 @app.cell
 def _():
     N_small = 6
-    N_big = 11
+    N_big = 13
     NC = 1
 
     eta = 1e-3
@@ -141,7 +141,7 @@ def _(Ham_re_small, rsse_big):
     nelec_big = len(elec_idx_big)
 
     print(Ham_re_small.nsc)
-    return Ham_elec_big, Ham_re_big, nelec_big
+    return Ham_elec_big, Ham_re_big, elec_idx_big, nelec_big
 
 
 @app.cell
@@ -189,6 +189,7 @@ def _(
         invG_small[_iE, :, :] += _invG 
 
         if rsse_collection_small.shape[1] == na_small: # if we use the dense/full memory version
+            raise ValueError("This method is deprecated ")
             _RSSE = rsse_small.self_energy(_z, bulk=False, coupling=False)[np.ix_(sub_idx_small, sub_idx_small)]
             invG_small[_iE, :, :] += - _RSSE
 
@@ -411,20 +412,25 @@ def _(match_coupling_atoms, nelec_big, nelec_small, xyz_big):
 
 
 @app.cell
-def _(Ham_elec_big, Ham_elec_small, scale_coupling):
-    distance_correction = scale_coupling(Ham_elec_small, Ham_elec_big)
-    return (distance_correction,)
+def _():
+    return
 
 
 @app.cell
-def _(distance_correction, energies, nelec_big, rsse_collection_small):
+def _(Ham_elec_big, Ham_elec_small, scale_coupling):
+    scaling = scale_coupling(Ham_elec_small, Ham_elec_big)
+    return (scaling,)
+
+
+@app.cell
+def _(energies, nelec_big, rsse_collection_small, scaling):
     # rsse_collection_dist = np.array([
     #     distance_correction @ rsse_collection_small[_eidx].ravel()
     #     for _eidx in range(len(energies))
     # ]).reshape(-1, nelec_big, nelec_big)
     small_flat = rsse_collection_small.reshape(len(energies), -1)
-    print(distance_correction.shape, small_flat.shape)
-    rsse_collection_dist = (small_flat @ distance_correction.T).reshape(len(energies), nelec_big, nelec_big)
+    print(scaling.shape, small_flat.shape)
+    rsse_collection_dist = (small_flat @ scaling.T).reshape(len(energies), nelec_big, nelec_big)
     return (rsse_collection_dist,)
 
 
@@ -453,20 +459,48 @@ def _():
 
 
 @app.cell(hide_code=True)
-def _(dos_dist, dos_extra, dos_small, energies, num_atoms_picker):
-    _fig, _axes = plt.subplots(1, 2, sharey=True)
+def _(
+    N_big,
+    N_small,
+    dos_dist,
+    dos_extra,
+    dos_small,
+    energies,
+    num_atoms_picker,
+):
+    from mytools.plots import thesis_fig
+    _fig, _axes = plt.subplots(1, 2, sharey=True, figsize=(8,4))
+    # _fig, _axes = thesis_fig(subplots=(1,2), sharey=True)
     # _axes[0].plot(energies, dos_small, label="small")
-    _axes[0].plot(energies, dos_small, label="big", color="k")
+    _axes[0].plot(energies, dos_small, label="small", color="k")
     _axes[0].plot(energies, dos_extra, label="extra")
-    _axes[0].plot(energies, dos_dist, label="dist")
+    _axes[0].plot(energies, dos_dist, label="dist", color="red")
+    _axes[0].set(title=r"(L)DOS per atom")
 
     _axes[1].plot(energies, dos_small - dos_extra, label="extra")
-    _axes[1].plot(energies, dos_small - dos_dist, label="dist")
-    _axes[1].set(title="difference with `big`")
+    _axes[1].plot(energies, dos_small - dos_dist, label="dist", color="red")
+    _axes[1].set(title=r"difference with `$small$` (per atom)")
+    _fig.suptitle(fr"N : {N_small} $\to$ {N_big}")
     for _ax in _axes:
         _ax.legend()
         _ax.grid()
     mo.output.append([_fig, num_atoms_picker])
+    return
+
+
+@app.cell
+def _(rsse_collection_dist, rsse_collection_small):
+    _fig, _ax = plt.subplots()
+
+    print("Original (small)")
+    print("max Im(Sigma):", rsse_collection_small.imag.max())
+    print("min Im(Sigma):", rsse_collection_small.imag.min())
+
+    print("Extrapolation")
+    print("max Im(Sigma): ", rsse_collection_dist.imag.max())
+    print("min Im(Sigma): ", rsse_collection_dist.imag.min())
+
+    _ax.imshow(rsse_collection_dist.imag[0])
     return
 
 
@@ -486,6 +520,30 @@ def _(dos_dist, dos_extra, dos_small):
         )
     print("RMSE extra : {:.3e}".format(rmse(dos_small, dos_extra)))
     print("RMSE dist  : {:.3e}".format(rmse(dos_small, dos_dist)))
+    return
+
+
+@app.cell
+def _(Ham_re_big, elec_idx_big):
+    from ase.visualize import view
+
+    atoms = np.concatenate([
+        [343, 347, 405],
+        np.arange(408, 425),
+        [427],
+        np.arange(475, 500),
+        np.arange(544, 573),
+        np.arange(617, 642),
+        [690],
+        np.arange(692, 709),
+        [712, 770, 774]
+    ]) - 1
+    # view(Ham_re_big.geometry.to.ase())
+
+    Ham_re_big.geometry.plot(axes="xy", atoms_style=[
+        dict(atoms=atoms, color="red"),
+        dict(atoms=range(len(elec_idx_big)), color="blue")
+    ])
     return
 
 
