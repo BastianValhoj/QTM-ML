@@ -1,10 +1,12 @@
-
 SystemName siesta
 SystemLabel tbt
 TBT.HS ./Ham_re_big.nc
 
+%block TBT.k
+  0. 0. 0.   1.0
+%endblock TBT.k
 
-TBT.k [1, 100, 1]
+%include ./TBT_Atoms_Device.fdf
 
 TBT.CDF.SelfEnergy.Save
 TBT.T.Bulk True
@@ -17,10 +19,10 @@ TBT.DOS.GF True
 %endblock TS.Elecs
 
 TBT.Elecs.Eta  0.001 eV
-TBT.Contours.Eta 0.00001 eV ## Actually matters..
+TBT.Contours.Eta 0.001 eV ## Actually matters..
 
 %block TBT.contour.line
-    from -2000. eV to 2000. eV # write whatever contour, since we will overwrite it with the one we computed
+    from -4.0 eV to 4.0 eV # write whatever contour, since we will overwrite it with the one we computed
     file contour.IN
 %endblock TBT.contour.line
 
@@ -31,3 +33,4 @@ TBT.Contours.Eta 0.00001 eV ## Actually matters..
     Out-of-core True
     tbt.gf RSSE.TBTGF
 %endblock Ts.Elec.Bottom
+

@@ -1,0 +1,29 @@
+%block TBT.Atoms.Device
+  atom 189
+  atom [192 -- 193]
+  atom 195
+  atom [197 -- 211]
+  atom 213
+  atom 215
+  atom 217
+  atom 255
+  atom [257 -- 293]
+  atom [322 -- 369]
+  atom [390 -- 443]
+  atom 459
+  atom [461 -- 515]
+  atom [531 -- 586]
+  atom [602 -- 656]
+  atom 658
+  atom [674 -- 727]
+  atom [748 -- 795]
+  atom [824 -- 860]
+  atom 862
+  atom 900
+  atom 902
+  atom 904
+  atom [906 -- 920]
+  atom 922
+  atom [924 -- 925]
+  atom 928
+%endblock

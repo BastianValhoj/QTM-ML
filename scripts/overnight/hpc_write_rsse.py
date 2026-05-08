@@ -129,7 +129,7 @@ def compute_rsse(Ham_re : sisl.Hamiltonian,
 def main():
     print("Building Hamiltonians and geometries...")
     Ham0 = make_base()
-    geom_edge_small, geom_edge_big = build_edges(Ham0, N_SMALL, N_BIG)
+    geom_edge_small, geom_edge_big = build_edges(Ham0.geometry, N_SMALL, N_BIG)
     
     
     print("Building RSSE objects...")
@@ -140,17 +140,19 @@ def main():
     resub_small = resub_ham(rsse_small)
     resub_big = resub_ham(rsse_big)
     
-    save_dict = {
-        'energies': ENERGIES,
-        'resub_small': resub_small,
-        'resub_big': resub_big
-    }
+    # save_dict = {
+    #     'energies': ENERGIES,
+    #     'resub_small': resub_small,
+    #     'resub_big': resub_big
+    # }
     
     Ham_elec_small = resub_small['Ham_elec']
     Ham_elec_big = resub_big['Ham_elec']
     
     Ham_re_small = resub_small['Ham_re']
     Ham_re_big = resub_big['Ham_re']
+    print("large electrode indices: {}".format(resub_big["elec_idx"]))
+    print("num electrode indices: {}".format(resub_big["num_elec"]))
     
     num_elec_small = resub_small['num_elec']
     num_elec_big = resub_big['num_elec']
@@ -226,7 +228,7 @@ def main():
     rsse_collection_extrapolated = (small_flat @ scaling.T).reshape(NUM_ENERGIES, num_elec_big, num_elec_big)
     
     # write contour 
-    sisl.io.table.tableSile(OUTPUT_DIR / "contour.IN", "w").write_data(ENERGIES, np.zeros_like(ENERGIES) + ETA)
+    sisl.io.table.tableSile(OUTPUT_DIR / "contour.IN", "w").write_data(ENERGIES, np.zeros(ENERGIES.shape) + ETA) # SHOULD ONLY BE 2D ARRAY! REAL(E). E+ETA
     
     Ham0.write(OUTPUT_DIR / "Ham0.nc")
     Ham_elec_big.write(OUTPUT_DIR / "Ham_elec_big.nc")
@@ -241,10 +243,12 @@ def main():
             if new_k:
                 Sk = Ham_elec_big.Sk(format="array")
                 Hk = Ham_elec_big.Hk(format="array")
-                f.write_hamiltonian(Hk, Sk)
+                f.write_hamiltonian(H=Hk, S=Sk)
             E_idx = np.where(np.isclose(ENERGIES, E.real, atol=1e-5))[0][0]
             f.write_self_energy(rsse_collection_extrapolated[E_idx])
             
+    
+    # find the device down-folded region
     L = np.linalg.norm(Ham_re_big.cell[0]) - 2*np.linalg.norm(Ham0.cell[0])
     print(f"Device length: {L:.2f} Angstrom")
     Rmax = np.sin(np.pi/3.) * L
@@ -260,10 +264,6 @@ def main():
     fdfinput = f"""SystemName siesta
 SystemLabel tbt
 TBT.HS ./Ham_re_big.nc
-
-%block TBT.k
-  0. 0. 0.   1.0
-%endblock TBT.k
 
 %include ./TBT_Atoms_Device.fdf
 
@@ -281,7 +281,7 @@ TBT.Elecs.Eta  {ETA} eV
 TBT.Contours.Eta {ETA} eV ## Actually matters..
 
 %block TBT.contour.line
-    from {EMIN} eV to {EMAX} eV # write whatever contour, since we will overwrite it with the one we computed
+    from {EMIN}. eV to {EMAX}. eV # write whatever contour, since we will overwrite it with the one we computed
     file contour.IN
 %endblock TBT.contour.line
 
@@ -292,7 +292,6 @@ TBT.Contours.Eta {ETA} eV ## Actually matters..
     Out-of-core True
     tbt.gf RSSE.TBTGF
 %endblock Ts.Elec.Bottom
-
 """
     with open(OUTPUT_DIR / "RUNTBT.fdf", "w") as f:
         f.write(fdfinput)

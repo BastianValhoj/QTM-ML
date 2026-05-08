@@ -4,8 +4,6 @@ TBT.HS ./Ham_re_big.nc
 
 %include ./TBT_Atoms_Device.fdf
 
-TBT.k [1, 100, 1]
-
 TBT.CDF.SelfEnergy.Save
 TBT.T.Bulk True
 TBT.DOS.Elecs True
@@ -17,10 +15,10 @@ TBT.DOS.GF True
 %endblock TS.Elecs
 
 TBT.Elecs.Eta  0.001 eV
-TBT.Contours.Eta 0.00001 eV ## Actually matters..
+TBT.Contours.Eta 0.001 eV ## Actually matters..
 
 %block TBT.contour.line
-    from -2000. eV to 2000. eV # write whatever contour, since we will overwrite it with the one we computed
+    from -4.0 eV to 4.0 eV # write whatever contour, since we will overwrite it with the one we computed
     file contour.IN
 %endblock TBT.contour.line
 
