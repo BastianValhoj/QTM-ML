@@ -24,12 +24,6 @@ def _():
     return (script_dir,)
 
 
-@app.cell
-def _(Ham0, N_small):
-    make_edge(Ham0.geometry, N_small, N_small)
-    return
-
-
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
@@ -46,9 +40,9 @@ def _(script_dir):
 
 @app.cell
 def _():
-    N_small = 6
-    N_big = 13
-    NC = 1
+    N_small = 3
+    N_big = 10
+    NC = 0
 
     eta = 1e-3
     nk1 = lambda N: int(np.ceil(1200/N))
@@ -412,11 +406,6 @@ def _(match_coupling_atoms, nelec_big, nelec_small, xyz_big):
 
 
 @app.cell
-def _():
-    return
-
-
-@app.cell
 def _(Ham_elec_big, Ham_elec_small, scale_coupling):
     scaling = scale_coupling(Ham_elec_small, Ham_elec_big)
     return (scaling,)
@@ -468,22 +457,33 @@ def _(
     energies,
     num_atoms_picker,
 ):
-    from mytools.plots import thesis_fig
-    _fig, _axes = plt.subplots(1, 2, sharey=True, figsize=(8,4))
-    # _fig, _axes = thesis_fig(subplots=(1,2), sharey=True)
+    from mytools.plots import thesis_fig, label_subplots
+    # _fig, _axes = plt.subplots(1, 2, sharey=True, figsize=(8,4))
+    _fig, _axes = thesis_fig(subplots=(2,1), sharex=True, dpi=150)
     # _axes[0].plot(energies, dos_small, label="small")
-    _axes[0].plot(energies, dos_small, label="small", color="k")
-    _axes[0].plot(energies, dos_extra, label="extra")
-    _axes[0].plot(energies, dos_dist, label="dist", color="red")
-    _axes[0].set(title=r"(L)DOS per atom")
+    _axes[0].plot(energies, dos_small, label=f"N={N_small}", color="k")
+    _axes[0].plot(energies, dos_extra, label=fr"N={N_small}$\to${N_big} (Naïve)")
+    _axes[0].plot(energies, dos_dist, label=fr"N={N_small}$\to${N_big} (Vector based)", color="red")
+    _axes[0].set(
+        title=r"DOS per atom",
+                 xlabel="E [ev]",
+                 ylabel="DOS per atom"
+                 )
 
-    _axes[1].plot(energies, dos_small - dos_extra, label="extra")
-    _axes[1].plot(energies, dos_small - dos_dist, label="dist", color="red")
-    _axes[1].set(title=r"difference with `$small$` (per atom)")
-    _fig.suptitle(fr"N : {N_small} $\to$ {N_big}")
+
+    _axes[1].plot(energies, dos_small - dos_extra, label=fr"N={N_small}$\to${N_big} (Naïve)")
+    _axes[1].plot(energies, dos_small - dos_dist, label=fr"N={N_small}$\to${N_big} (Vector based)", color="red")
+    _axes[1].set(
+        # title=r"difference with `$small$` (per atom)",
+                 xlabel="E [eV]",
+                 ylabel=r"$\mathrm{DOS}_{extra} - \mathrm{DOS}$"
+                 )
+    # _fig.suptitle(fr"N : {N_small} $\to$ {N_big}")
+    label_subplots(_axes, pos=(0.05, 0.95))
     for _ax in _axes:
         _ax.legend()
         _ax.grid()
+    _fig.savefig("./../figures/calculate_rsse_distance_correction-LDOS")
     mo.output.append([_fig, num_atoms_picker])
     return
 
@@ -540,7 +540,8 @@ def _(Ham_re_big, elec_idx_big):
     ]) - 1
     # view(Ham_re_big.geometry.to.ase())
 
-    Ham_re_big.geometry.plot(axes="xy", atoms_style=[
+    Ham_re_big.geometry.plot(axes="xy", 
+    atoms_style=[
         dict(atoms=atoms, color="red"),
         dict(atoms=range(len(elec_idx_big)), color="blue")
     ])
