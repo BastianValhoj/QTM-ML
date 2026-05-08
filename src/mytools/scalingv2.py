@@ -115,23 +115,28 @@ def map_edges(g1, g2, tiles1, tiles2, na=6, NC=1):
     # cent2_frac = get_fractional(g2, cent2)
     
     # CORRECTION we will only support cases where Na=Nb so each side is equal length
-    n1_per_side = edges1.shape[0] // 4 // na # number of UC/centroids per side in small
-    n2_per_side = edges2.shape[0] // 4 // na # number of centroids per side in big
-    # print(n1_per_side)
+    n1_per_side = edges1.shape[0] // 4  # number of atoms per side in small
+    n2_per_side = edges2.shape[0] // 4  # number of atoms per side in big
+    # print("centroids per side:", n1_per_side)
     # print(n2_per_side)
+    # print("atoms in small edge:", edges1)
     
     # match only using kNN to centroids ON THE SAME EDGE!! otherwise some combination of tiles wrongfully match indices
     edge_idx1_to_idx2 = np.empty(edges2.shape[0] // na, dtype=int)
     for side in range(4):
         e1_side  = edges1[side*n1_per_side : (side+1)*n1_per_side]
-        e2_side  = edges1[side*n1_per_side : (side+1)*n1_per_side]
-        
+        e2_side  = edges2[side*n2_per_side: (side+1)*n2_per_side]
+        print(f"small edge atoms {side}:", e1_side)
+        print(f"big edges atoms  {side}:", e2_side)
         cent1_side = get_centers(g1.xyz[e1_side.flatten()], na)
         cent2_side = get_centers(g2.xyz[e2_side.flatten()], na)
-        
+        # print(f"centroids 2 in edge {side}", cent1_side)
+        # print(f"centroids 2 in edge {side}", cent2_side)
+        # print(cent2_side)
         cent1_frac = get_fractional(g1, cent1_side)
         cent2_frac = get_fractional(g2, cent2_side)
-        
+        print("centroid frac small:", cent1_frac)
+        print("centroid frac big  :", cent2_frac)
         tree = cKDTree(cent1_frac)
         _, idx = tree.query(cent2_frac, k=1)
         # print("idx")
