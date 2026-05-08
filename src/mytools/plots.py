@@ -3,6 +3,7 @@ import matplotlib as mpl
 from matplotlib import ticker
 import numpy as np
 
+
 fontsize = 11
 tex_fonts = {
         #"text.usetex": True,            # use LaTeX for all text (use False to avoid calling external dependecies)
@@ -34,7 +35,7 @@ def thesis_fig(width_pt=426.79135,
         subplots=(1,1), 
         use_tex=False,
         aspect=None,
-        **kwargs):
+        **kwargs) -> tuple[plt.Figure, plt.Axes]:
     r"""
     Initializes a matplotlib figure with dimensions scaled to a LaTeX document.
 
