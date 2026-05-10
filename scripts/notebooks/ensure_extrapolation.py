@@ -14,7 +14,7 @@ with app.setup:
     from mytools.scalingv2 import get_edges, get_corners
     from mytools.scalingv2 import get_centers
     from mytools.scalingv2 import get_fractional
-    from mytools.scalingv2 import map_edges
+    # from mytools.scalingv2 import map_edges
 
     from scipy.spatial import cKDTree
 
@@ -22,8 +22,8 @@ with app.setup:
 @app.cell
 def _():
     BOND = 1.42
-    N_small = 5
-    N_big = 11
+    N_small = 9
+    N_big = 12
 
     ETA = 1e-3
     NK1 = 400
@@ -140,7 +140,7 @@ def _(mo):
 @app.cell
 def _():
     import enum
-    def show_centroids(coords, direction="in", ax=None, *, tol=1e-1, shift=0.05, labels=None):
+    def show_centroids(coords, direction="in", ax=None, *, tol=8e-2, shift=0.08, labels=None):
         if ax is None:
             fig, ax = plt.subplots()
         ax.scatter(*coords[:, :2].T)
@@ -183,7 +183,7 @@ def new_frac(cell, coords):
 @app.cell
 def _(centroids_small, geom_edge_small, show_centroids):
     edge_frac_small = get_fractional(geom_edge_small, centroids_small)
-    edge_frac_small = new_frac(geom_edge_small.cell, coords=centroids_small)
+    # edge_frac_small = new_frac(geom_edge_small.cell, coords=centroids_small)
     print(edge_frac_small)
     _fig, _ax = plt.subplots()
 
@@ -256,10 +256,55 @@ def map_centroids():
     #         # edge_idx_small_to_big[side*atoms_per_side_big : (side+1)*atoms_per_side_big] = idx + side*atoms_per_side_small
     # map_centroids(geom_edge_small, geom_edge_big, N_small, N_big, Ham0.na, NC=NC)
 
+    def map_edges(g1, g2, tiles1, tiles2, na=6, NC=1):
+        if isinstance(tiles1, (tuple, list)):
+            raise ValueError("We will only allow tiles1 being integer corresponding to tiling the same amount along vectors A and B")
+            N1a, N1b = tiles1
+        else:
+            N1a = N1b = tiles1
+    
+        if isinstance(tiles2, (tuple, list)):
+            raise ValueError("We will only allow tiles2 being integer corresponding to tiling the same amount along vectors A and B")
+            N2a, N2b = tiles2
+        else:
+            N2a = N2b = tiles2
+        
+    
+        # get centroids
+        edges1 = get_edges(N1a, N1b, na, NC)
+        edges2 = get_edges(N2a, N2b, na, NC)
+    
+        cent1 = get_centers(g1.xyz[edges1], na)
+        cent2 = get_centers(g2.xyz[edges2], na)
+    
+        # # get fractional centroids
+        cent1_frac = get_fractional(g1, cent1)
+        cent2_frac = get_fractional(g2, cent2)
+    
+        # CORRECTION we will only support cases where Na=Nb so each side is equal length
+        n1_per_side = edges1.shape[0] // 4 // na # number of atoms per uc per side in small
+        n2_per_side = edges2.shape[0] // 4 // na # number of atoms per uc per side in big
+
+        edge_idx1_to_idx2 = np.empty(n2_per_side*4, dtype=int)
+
+        if n2_per_side % n1_per_side == 0:
+            divisor = n2_per_side // n1_per_side
+            for side in range(4):
+                edge_idx1_to_idx2[side*n2_per_side:(side+1)*n2_per_side] = np.arange(side*n1_per_side, (side+1)*n1_per_side).repeat(divisor)
+        else:
+            # match only using kNN to centroids ON THE SAME EDGE!! otherwise some combination of tiles wrongfully match indices
+            for side in range(4):
+                tree = cKDTree(cent1_frac[side*n1_per_side:(side+1)*n1_per_side])
+                _, idx = tree.query(cent2_frac[side*n2_per_side:(side+1)*n2_per_side], k=1)
+            
+                edge_idx1_to_idx2[side*n2_per_side:(side+1)*n2_per_side] = idx + side*n1_per_side
+    
+        # return edges1.reshape(-1, na), edge_idx1_to_idx2
+
+    from mytools.scalingv2 import map_edges
 
 
-
-    return
+    return (map_edges,)
 
 
 @app.cell
@@ -272,6 +317,7 @@ def _(
     edge_frac_small,
     geom_edge_big,
     geom_edge_small,
+    map_edges,
     show_centroids,
 ):
     # print(edge_frac_big)
@@ -280,7 +326,6 @@ def _(
     _, small_to_big_idx = map_edges(geom_edge_small, geom_edge_big, N_small, N_big, Ham0.na, NC=NC)
     show_centroids(edge_frac_small, "in", _ax)
     show_centroids(edge_frac_big, "out", _ax, labels=small_to_big_idx)
-
     # show_centroids(edge_frac_big, "out", _ax)
     _ymin, _ymax = _ax.get_ylim()
     _xmin, _xmax = _ax.get_xlim()
@@ -289,6 +334,29 @@ def _(
     _ax.grid()
     _fig.suptitle("kNN matching centroids")
     _fig
+    return (small_to_big_idx,)
+
+
+@app.cell
+def _(small_to_big_idx):
+    plt.hist(small_to_big_idx, bins=max(small_to_big_idx), align="mid", width=0.5)
+    plt.show()
+    return
+
+
+@app.cell
+def _(small_to_big_idx):
+    np.unique_counts(small_to_big_idx)
+    return
+
+
+@app.cell
+def _():
+    _divisor = 3
+    _n1_per_side = 2
+    with np.printoptions(formatter={'int': lambda x: f"{x:>2}"}):
+        for _side in range(4):
+            print(np.arange(_side*_n1_per_side, (_side+1)*_n1_per_side).repeat(_divisor))
     return
 
 
