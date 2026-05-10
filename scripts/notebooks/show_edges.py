@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.3"
+__generated_with = "0.23.5"
 app = marimo.App(width="full")
 
 with app.setup:
@@ -157,7 +157,7 @@ def _(FIG_DIR, Ham0, edges_big, edges_small, geom_edge_big, geom_edge_small):
         if (x < tol): dx = +shift
         elif (x > 1 - tol): dx = -shift
         else: dx = 0
-    
+
         if (y < tol): dy = +shift
         elif (y > 1-tol): dy = -shift
         else: dy = 0
@@ -184,6 +184,11 @@ def _(FIG_DIR, Ham0, edges_big, edges_small, geom_edge_big, geom_edge_small):
     fig.suptitle("Centroid-based equivalence")
     fig.savefig(FIG_DIR / "show_edges_centroids")
     fig
+    return
+
+
+@app.cell
+def _():
     return
 
 
