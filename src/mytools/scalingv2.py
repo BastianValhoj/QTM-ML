@@ -14,6 +14,7 @@ def get_fractional(geometry, coords=None):
     # elif (coords is not None) and (coords.shape[1] == 3):
     #     coords = geom.xyz[:, :2]
     frac = coords @ Inv
+    frac = frac - np.min(frac, axis=0, keepdims=True)
     return frac / np.max(frac, axis=0, keepdims=True)
 
 
