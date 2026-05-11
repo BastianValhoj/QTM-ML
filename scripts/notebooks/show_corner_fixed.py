@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.3"
+__generated_with = "0.23.5"
 app = marimo.App(width="full")
 
 with app.setup:
@@ -42,7 +42,7 @@ def _():
 
     # N0 = 3
     N_small = 5
-    N_big = 10
+    N_big = 11
 
     R = (0.1, BOND+1e-2)
     T = (0.0, -2.7)
@@ -102,7 +102,7 @@ def _():
 @app.cell
 def _(Ham0, N_big, N_small, edge_for_plot):
     fig, axes = thesis_fig(subplots=(2,1))
-    fig = cast(plt.Figure, fig)
+    # fig = cast(plt.Figure, fig)
     # axes = cast(list[plt.Axes, plt.Axes], axes)
     for idx, ax in enumerate(axes):
         ax = cast(plt.Axes, ax)
@@ -117,14 +117,13 @@ def _(Ham0, N_big, N_small, edge_for_plot):
         ax.scatter(*geom_edge_small[corners_small, :2].T, color="grey")
         ax.set(title=f"NC={idx}", xticklabels="", yticklabels="")
         ax.set_axis_off()
-    fig.savefig("../figures/show_corner_fixed")
+    fig.savefig(f"../figures/show_corner_fixed_{N_small}_to_{N_big}")
     fig
     return
 
 
 @app.cell
 def _():
-    plt.Figure
     return
 
 

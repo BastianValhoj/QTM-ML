@@ -21,6 +21,8 @@ with app.setup:
 @app.cell
 def _():
     script_dir = Path(__file__).parent
+    for _file in script_dir.glob("*.nc"):
+        print(_file)
     return (script_dir,)
 
 
@@ -35,6 +37,15 @@ def _():
 @app.cell
 def _(script_dir):
     Ham0 = sisl.get_sile(script_dir / "Ham0.nc").read_hamiltonian()
+    try:
+        sisl.get_sile(script_dir / "Ham0.nc").read_hamiltonian()
+        print("Retrieved file from save netCDF file")
+    except FileNotFoundError:
+        graphen6 = all_armchair(1.42)
+        _R = (0.1, 1.44)
+        _T = (0.0, -2.7)
+        Ham0 = sisl.Hamiltonian(graphen6)
+        Ham0.construct([_R, _T])
     return (Ham0,)
 
 
