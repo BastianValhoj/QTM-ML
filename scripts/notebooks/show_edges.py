@@ -32,8 +32,8 @@ def _():
     B = BOND*np.cos(phi/2)
 
     # N0 = 3
-    N_small = 5
-    N_big = 10
+    N_small = 11
+    N_big = 50
 
     R = (0.1, BOND+1e-2)
     T = (0.0, -2.7)
@@ -124,11 +124,20 @@ def _(Ham0, NC, N_big, N_small, geom_edge_big, geom_edge_small):
     _, edge_idx1_to_idx2 = map_edges(geom_edge_small, geom_edge_big, N_small,N_big, na=Ham0.na, NC=NC)
 
     edge_idx1_to_idx2
-    return
+    return (edge_idx1_to_idx2,)
 
 
 @app.cell
-def _(FIG_DIR, Ham0, edges_big, edges_small, geom_edge_big, geom_edge_small):
+def _(
+    FIG_DIR,
+    Ham0,
+    N_big,
+    N_small,
+    edges_big,
+    edges_small,
+    geom_edge_big,
+    geom_edge_small,
+):
     from matplotlib.transforms import Bbox
     centroids_edge_small = get_centers(geom_edge_small.xyz[edges_small], Ham0.na)
     centroids_edge_big = get_centers(geom_edge_big.xyz[edges_big], Ham0.na)
@@ -152,7 +161,7 @@ def _(FIG_DIR, Ham0, edges_big, edges_small, geom_edge_big, geom_edge_small):
         # yticklabels=np.arange(0, 1.2, 0.2).round(3),
         )
     shift = 5e-2
-    tol: float = 0.1
+    tol: float = 0.01
     for idx, (x,y) in enumerate(centroids_frac_small):
         if (x < tol): dx = +shift
         elif (x > 1 - tol): dx = -shift
@@ -182,13 +191,14 @@ def _(FIG_DIR, Ham0, edges_big, edges_small, geom_edge_big, geom_edge_small):
     xmin, xmax = ax.get_xlim()
     ax.set(ylim=(min(ymin-shift, -shift), max(ymax+shift, shift)), xlim=(min(xmin-shift, -shift), max(ymax+shift, shift)) )
     fig.suptitle("Centroid-based equivalence")
-    fig.savefig(FIG_DIR / "show_edges_centroids")
+    fig.savefig(FIG_DIR / f"show_edges_centroids_{N_small}_to_{N_big}")
     fig
     return
 
 
 @app.cell
-def _():
+def _(edge_idx1_to_idx2):
+    plt.hist(edge_idx1_to_idx2, bins=max(edge_idx1_to_idx2)+50, align="mid", width=0.25)
     return
 
 
