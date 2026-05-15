@@ -16,6 +16,7 @@ with app.setup:
     # import matplotlib.cm as cm
     import matplotlib.colors as mcolors
     from scipy.signal import find_peaks
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
 
 @app.cell(hide_code=True)
@@ -66,24 +67,23 @@ def read_fdf_device_atoms(filepath):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # define the extrapolation case we want to investigate
+    # Define the extrapolation case we want to investigate
     """)
     return
 
 
 @app.cell
 def _():
-    NC = 1
+    NC = 0
     Nstart = 1 + 2*(NC+1) # min number of tiles
     N_bases = range(Nstart, 13)
-    N_target = 50
+    N_target = 30
     print(N_bases)
     return NC, N_bases, N_target
 
 
 @app.cell
 def _(NC, N_target):
-    from ase.io.cube import DATA
     SCRIPT_DIR = Path(__file__).parent
     WORK_DIR = Path.home() / "w3"
     DATA_DIR = WORK_DIR / "rsse_data"
@@ -101,7 +101,7 @@ def _(DATA_DIR, NC, N_target):
 
 @app.cell
 def _(OUT_DIR):
-    _N = 12
+    _N = 10
     print(OUT_DIR(_N))
     print([_file for _file in os.listdir(OUT_DIR(_N)) if ("TBT" in _file) and (".nc" in _file)])
     return
@@ -130,7 +130,7 @@ def _(N_bases, OUT_DIR):
     pivot = tbtse_top.pivot(0, in_device=True, sort=True)
     print(pivot.T.shape)
     print(tbtse_top.a_down(elec=0))
-    return (tbtse_top,)
+    return tbtse_bottom, tbtse_top
 
 
 @app.cell
@@ -151,51 +151,353 @@ def _(N_bases, OUT_DIR):
 
 
 @app.cell
+def _():
+    ~ np.array([True, False])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Plot using bottom row for values below threshold
+    """)
+    return
+
+
+@app.cell
 def _(NC, N_bases, N_target, OUT_DIR):
     cmap = plt.get_cmap("tab10")  # or any other colormap
-    norm = mcolors.Normalize(vmin=3, vmax=max(N_bases))
+    norm = mcolors.Normalize(vmin=3, vmax=max(N_bases)) # 
 
-    # _fig, _axes = plt.subplots(1,2, sharey=True)
-    from mytools.plots import thesis_fig
-    _fig, _axes = thesis_fig(subplots=(1,2), sharey=True)
+    from mytools.plots import thesis_fig, label_subplots
+    _fig, _axes = thesis_fig(subplots=(2,2), sharey=False, sharex=False, gridspec_kw={"height_ratios": [1, 1/2]})
 
-    for _N in N_bases:
-        _tbtout_top = sisl.get_sile(OUT_DIR(_N) / "tbt-top.TBT.nc")
-        _tbtout_bottom = sisl.get_sile(OUT_DIR(_N) / "tbt-bottom.TBT.nc")
-
-        _color = cmap(norm(_N))
-        _axes[0].plot(_tbtout_top.E, _tbtout_top.ADOS(atoms=_tbtout_top.a_dev)/_tbtout_top.na_d, '.', alpha=1., color=_color)
-        _axes[1].plot(_tbtout_bottom.E, _tbtout_bottom.ADOS(atoms=_tbtout_bottom.a_dev)/_tbtout_bottom.na_d, '.', alpha=1., color=_color)
-
+    # read data for plotting Ground Truth (no extrapolation)
     _temp = sisl.get_sile(OUT_DIR(N_bases[-1]) / "tbt-og.TBT.nc")
     _ados = _temp.ADOS(atoms=_temp.a_dev)/_temp.na_d
     _peaks_idx, _  = find_peaks(_ados, prominence=0.) # tune prominence to filter noise
 
-    with np.printoptions(formatter={"float": lambda x: f"{x:05.2f} |", "int": lambda x: f"{x:>4.0f}  |", }, linewidth=120):
-        print(f"                       N : {np.array(N_bases)}")
-        print("-"*100)
-        print(f"         N_big / N_small : {N_target / np.array(N_bases)}")
-        print(f"   (N_big - 2) / N_small : {(N_target-2) / np.array(N_bases)}")
-        print(f"  (N_big - NC) / N_small : {(N_target-NC) / np.array(N_bases)}")
-        print(f"(N_big - 2*NC) / N_small : {(N_target-2*NC) / np.array(N_bases)}")
+    # every row share y axis independently
+    for _i in range(2):
+        _axes[_i,0].sharey(_axes[_i, 1])
 
-    for _ax in _axes:
+    # Determine split for when values in one should be on second plot
+    _ysplit = -0.01
+    _alphas = 0.75 # transparency of scatter plot
+    _needs_bottom_row = False
+
+    _Ns_to_show = N_bases
+    # loop over different tilings
+    for _N in _Ns_to_show:
+        _tbtout_top = sisl.get_sile(OUT_DIR(_N) / "tbt-top.TBT.nc")
+        _tbtout_bottom = sisl.get_sile(OUT_DIR(_N) / "tbt-bottom.TBT.nc")
+        _ados_top = _tbtout_top.ADOS(atoms=_tbtout_top.a_dev) / _tbtout_top.na_d
+        _ados_bottom = _tbtout_bottom.ADOS(atoms=_tbtout_bottom.a_dev) / _tbtout_bottom.na_d
+
+        # mask for positive valued indices
+        _pos_mask_top = _ados_top > _ysplit
+        _pos_mask_bottom = _ados_bottom > _ysplit
+
+        ## use the standardized colors (each value of N, e.g. N=12, has the same color even when if the total number of scatter plots change)
+        _color = cmap(norm(_N))
+
+        # plot positive valued ADOS in first row
+        _axes[0,0].plot(_tbtout_top.E[_pos_mask_top], _ados_top[_pos_mask_top], '.', alpha=_alphas, color=_color)
+        _axes[0,1].plot(_tbtout_bottom.E[_pos_mask_bottom], _ados_bottom[_pos_mask_bottom], '.', alpha=_alphas, color=_color)
+
+        # if not all values where positive, use second row to show negative data points
+        if not (_pos_mask_top.all() and _pos_mask_bottom.all()):
+            _needs_bottom_row = True
+            _axes[1,0].plot(_tbtout_top.E[~ _pos_mask_top], _ados_top[~ _pos_mask_top], '.', alpha=_alphas, color=_color)
+            _axes[1,1].plot(_tbtout_bottom.E[~ _pos_mask_bottom], _ados_bottom[~ _pos_mask_bottom], '.', alpha=_alphas, color=_color)
+
+    # if no negative ADOS values, remove second row, otherwise make columns of subplots share x axis
+    if not _needs_bottom_row:
+        _fig.delaxes(_axes[1,0])
+        _fig.delaxes(_axes[1,1])
+    else:
+        _axes[0,0].sharex(_axes[1,0])
+        _axes[0,1].sharex(_axes[1,1])
+
+    for _ax in _axes[0,:]:
         _ax.plot(_temp.E, _ados, color="k", alpha=0.5)
-        _ax.set(ylabel="DOS", xlabel="E")
+
+
+    ## Make inset in top row subplots
+    for _col, _ax in enumerate([_axes[0,0], _axes[0,1]]):
+        _inset = inset_axes(_ax, width="100%", height="100%", loc="upper center", 
+        bbox_to_anchor=(0.37, 0.6, 0.4, 0.4), bbox_transform=_ax.transAxes
+        )
+
+        # re-plot the same data on the inset
+        for _N in _Ns_to_show:
+            _inset_tbt = sisl.get_sile(OUT_DIR(_N) / f"tbt-{'top' if _col == 1 else 'bottom'}.TBT.nc")
+            _inset_ados = _inset_tbt.ADOS(atoms=_inset_tbt.a_dev) / _inset_tbt.na_d
+            _mask = (_inset_tbt.E >= -1) & (_inset_tbt.E <= +1)
+
+            _color = cmap(norm(_N)) 
+            _inset.plot(_inset_tbt.E[_mask], _inset_ados[_mask], '.', alpha=_alphas, color=_color)
+
+        _mask = (_temp.E >= -1) & (_temp.E <= +1)
+        _inset.plot(_temp.E[_mask], _ados[_mask], color="k", alpha=0.5)
+        _inset.set(xlim=(-1,1))
+        _inset.grid(True, alpha=0.4)
+        _inset.tick_params(labelsize=9) 
+
+        mark_inset(_ax, _inset, 3, 4, linestyle="--", lw=1, edgecolor="k", alpha=0.8, zorder=0)
+
+
+    with np.printoptions(formatter={"float": lambda x: f"{x:05.2f} |", "int": lambda x: f"{x:>4.0f}  |", }, linewidth=120):
+        print(f"                           N : {np.array(N_bases)}")
+        print("-"*100)
+        print(f"             N_big / N_small : {N_target / np.array(N_bases)}")
+        print(f"       (N_big - 2) / N_small : {(N_target-2) / np.array(N_bases)}")
+        print(f"      (N_big - NC) / N_small : {(N_target-NC) / np.array(N_bases)}")
+        print(f"    (N_big - 2*NC) / N_small : {(N_target-2*NC) / np.array(N_bases)}")
+        print(f"(N_big - 2*NC - 2) / N_small : {(N_target-2*NC-2) / np.array(N_bases)}")
+
+
+    # Set limits, labels, and peak/pole lines
+    for _i, _ax in enumerate(_axes.flatten()):
         _ax.grid()
+        _ylow, _yhigh = _ax.get_ylim()
+        if _i in [0,1]:
+            _ax.set(ylim=(min(0, _ysplit), _yhigh))
+        if _i in [2,3]:
+            _ax.set(ylim=(_ylow+_ysplit, max(0, _ysplit)))
+
+        if _i in [0,2]:
+            _ax.set(ylabel=r"DOS $\left[\mathrm{eV}^{-1}\right]$")
+        if _i in [2,3]:
+            _ax.set(xlabel="E [eV]")
+        if not _needs_bottom_row:
+            _ax.set(xlabel="E [eV]")
         for _idx in _peaks_idx:
-            _ax.axvline(_temp.E[_idx], color="k", linestyle="--", alpha=0.5, linewidth=0.8)
+            _ax.axvline(_temp.E[_idx], color="k", linestyle="--", alpha=0.5, linewidth=0.8, zorder=0)
 
+    label_subplots(_axes)
 
-
+    # Create legend (placement depends on if there is a second row or not)
     _ncols = np.ceil( (len(N_bases)+1) / 3)
-    _fig.legend([f"N={_n}" for _n in N_bases] + [f"Exact (N={_N})"], ncols=_ncols, bbox_to_anchor=(0.5, -0.1), loc="upper center")
-    _fig.suptitle(f"Extrapolation to target N={N_target}, NC={NC}", y=1.2)
-    _axes[0].set(title="Top electrode")
-    _axes[1].set(title="Bottom electrode")
+    if _needs_bottom_row:
+        _fig.legend([f"N={_n}" for _n in _Ns_to_show] + [f"Exact (N={_N})"], ncols=_ncols, bbox_to_anchor=(0.5, -0.01), loc="upper center")
+    else:
+        _fig.legend([f"N={_n}" for _n in _Ns_to_show] + [f"Exact (N={_N})"], ncols=_ncols, bbox_to_anchor=(0.5, 0.29), loc="upper center")
+    _fig.suptitle(f"Extrapolation to target N={N_target}, NC={NC}", y=1.1)
+    _axes[0,0].set(title="Top layer")
+    _axes[0,1].set(title="Bottom layer")
+    _fig.set_constrained_layout(True)
     _fig.savefig(f"figures/read_rsse_NC{NC}_{N_bases[0]}-{N_bases[-1]}_to_{N_target}")
     _fig
-    return cmap, norm
+    return cmap, label_subplots, norm, thesis_fig
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Plot for using subplots below and above for extremes
+    """)
+    return
+
+
+@app.cell
+def _(
+    NC,
+    N_bases,
+    N_target,
+    OUT_DIR,
+    cmap,
+    label_subplots,
+    norm,
+    tbtse_bottom,
+    thesis_fig,
+):
+    _fig, _axes = thesis_fig(subplots=(3,2), sharey=False, sharex=False, gridspec_kw={"height_ratios": [1/2, 1, 1/2]})
+
+    # read data for plotting Ground Truth (no extrapolation)
+    _temp = sisl.get_sile(OUT_DIR(N_bases[-1]) / "tbt-og.TBT.nc")
+    _ados = _temp.ADOS(atoms=_temp.a_dev)/_temp.na_d
+    _peaks_idx, _  = find_peaks(_ados, prominence=0.) # tune prominence to filter noise
+
+    # every row share y axis independently
+    for _i in range(2):
+        _axes[_i,0].sharey(_axes[_i, 1])
+
+    # Determine split for when values in one should be on second plot
+    _ylow_split = -0.01
+    _needs_bottom_row = False
+
+    _yhigh_split = np.max(_ados) + 1e-1  # adjust threshold to taste
+    _needs_top_row = False
+
+    _alphas = 0.75 # transparency of scatter plot
+
+    _Ns_to_show = N_bases
+    # loop over different tilings
+    scatter_plots = []
+    for _N in _Ns_to_show:
+        _tbtout_top = sisl.get_sile(OUT_DIR(_N) / "tbt-top.TBT.nc")
+        _tbtout_bottom = sisl.get_sile(OUT_DIR(_N) / "tbt-bottom.TBT.nc")
+        _ados_top = _tbtout_top.ADOS(atoms=_tbtout_top.a_dev) / _tbtout_top.na_d
+        _ados_bottom = _tbtout_bottom.ADOS(atoms=_tbtout_bottom.a_dev) / _tbtout_bottom.na_d
+
+        if np.max(np.abs(tbtse_bottom.E)) > 4:
+            print(f"Bottom electrode for N = {_N} is > |4|")
+        # mask for positive valued indices and below threshold
+        _mask_top = (_ados_top > _ylow_split) & (_ados_top < _yhigh_split)
+        _mask_bottom = (_ados_bottom > _ylow_split) & (_ados_bottom < _yhigh_split)
+
+        ## use the standardized colors (each value of N, e.g. N=12, has the same color even when if the total number of scatter plots change)
+        _color = cmap(norm(_N))
+
+        # plot positive valued ADOS in first row
+        plots, = _axes[1,0].plot(_tbtout_top.E[_mask_top], _ados_top[_mask_top], '.', alpha=_alphas, color=_color)
+        _axes[1,1].plot(_tbtout_bottom.E[_mask_bottom], _ados_bottom[_mask_bottom], '.', alpha=_alphas, color=_color)
+        scatter_plots.append(plots)
+
+        # if not all values where positive, use second row to show negative data points
+        if not (_mask_top.all() and _mask_bottom.all()):
+            # _needs_bottom_row = True
+            # _needs_top_row = True
+            _mask_top_low = (_ados_top < _ylow_split)
+            _mask_bottom_low = (_ados_bottom < _ylow_split)
+            if (_mask_top_low.any()) or (_mask_bottom_low.any()):
+                print(f"Values below {_ylow_split}")
+                print(_ados_top[_mask_top_low])
+                print(_ados_bottom[_mask_bottom_low])
+                _needs_bottom_row = True
+                _axes[2,0].plot(_tbtout_top.E[_mask_top_low], _ados_top[_mask_top_low], '.', alpha=_alphas, color=_color)
+                _axes[2,1].plot(_tbtout_bottom.E[_mask_bottom_low], _ados_bottom[_mask_bottom_low], '.', alpha=_alphas, color=_color)
+
+            _mask_top_high = (_ados_top > _yhigh_split)
+            _mask_bottom_high = (_ados_bottom > _yhigh_split)
+            if (_mask_top_high.any()) or (_mask_bottom_high.any()):
+                print(f"Values above {_yhigh_split}:")
+                print(_ados_top[_mask_top_high])
+                print(_ados_bottom[_mask_bottom_high])
+                _needs_top_row = True
+                _axes[0,0].plot(_tbtout_top.E[_mask_top_high], _ados_top[_mask_top_high], '.', alpha=_alphas, color=_color)
+                _axes[0,1].plot(_tbtout_bottom.E[_mask_bottom_high], _ados_bottom[_mask_bottom_high], '.', alpha=_alphas, color=_color)
+    
+
+    # if no negative ADOS values, remove second row, otherwise make columns of subplots share x axis
+    _axes[0,0].sharex(_axes[1,0])
+    _axes[0,1].sharex(_axes[1,1])
+
+    _axes[2,0].sharex(_axes[1,0])
+    _axes[2,1].sharex(_axes[1,1])
+
+    _axes[0,0].sharey(_axes[0,1])
+    _axes[1,0].sharey(_axes[1,1])
+    _axes[2,0].sharey(_axes[2,1])
+
+
+    if not _needs_top_row:
+        print("Does not need top row")
+        if not _needs_bottom_row:
+            print("Also does not need bottom row")
+            _fig.delaxes(_axes[2,0])
+            _fig.delaxes(_axes[2,1])
+        _fig.delaxes(_axes[0,0])
+        _fig.delaxes(_axes[0,1])
+    elif _needs_top_row and (not _needs_bottom_row):
+        print("Needs top row, do not need bottom row")
+        _fig.delaxes(_axes[2,0])
+        _fig.delaxes(_axes[2,1])
+
+    for _i, _ax in enumerate(_axes[1,:]):
+        if _i == 0:
+            plots, = _ax.plot(_temp.E, _ados, color="k", alpha=0.5)
+            scatter_plots.append(plots)
+        else:
+            _ax.plot(_temp.E, _ados, color="k", alpha=0.5)
+
+
+    ## Make inset in top row subplots
+    for _col, _ax in enumerate([_axes[1,0], _axes[1,1]]):
+        _inset = inset_axes(_ax, width="100%", height="100%", loc="upper center", 
+        bbox_to_anchor=(0.37, 0.6, 0.4, 0.4), bbox_transform=_ax.transAxes
+        )
+
+        # re-plot the same data on the inset
+        for _N in _Ns_to_show:
+            _inset_tbt = sisl.get_sile(OUT_DIR(_N) / f"tbt-{'top' if _col == 1 else 'bottom'}.TBT.nc")
+            _inset_ados = _inset_tbt.ADOS(atoms=_inset_tbt.a_dev) / _inset_tbt.na_d
+            _mask = (_inset_tbt.E >= -1) & (_inset_tbt.E <= +1)
+
+            _color = cmap(norm(_N)) 
+            _inset.plot(_inset_tbt.E[_mask], _inset_ados[_mask], '.', alpha=_alphas, color=_color)
+
+        _mask = (_temp.E >= -1) & (_temp.E <= +1)
+        _inset.plot(_temp.E[_mask], _ados[_mask], color="k", alpha=0.5)
+        _inset.set(xlim=(-1,1))
+        _inset.grid(True, alpha=0.4)
+        _inset.tick_params(labelsize=9) 
+
+        mark_inset(_ax, _inset, 3, 4, linestyle="--", lw=1, edgecolor="k", alpha=0.8, zorder=0)
+
+
+    with np.printoptions(formatter={"float": lambda x: f"{x:05.2f} |", "int": lambda x: f"{x:>4.0f}  |", }, linewidth=120):
+        print(f"                           N : {np.array(N_bases)}")
+        print("-"*100)
+        print(f"             N_big / N_small : {N_target / np.array(N_bases)}")
+        print(f"       (N_big - 2) / N_small : {(N_target-2) / np.array(N_bases)}")
+        print(f"      (N_big - NC) / N_small : {(N_target-NC) / np.array(N_bases)}")
+        print(f"    (N_big - 2*NC) / N_small : {(N_target-2*NC) / np.array(N_bases)}")
+        print(f"(N_big - 2*NC - 2) / N_small : {(N_target-2*NC-2) / np.array(N_bases)}")
+
+
+    # Set limits, labels, and peak/pole lines
+    for _i, _ax in enumerate(_axes.flatten()):
+        _ax.grid()
+        _ylow, _yhigh = _ax.get_ylim()
+        if _needs_top_row and (_i in [0,1]):
+            _ax.set(ylim=(_yhigh_split, _yhigh+_yhigh_split))
+        if _i in [2,3]:
+            _ax.set(ylim=(min(0,_ylow_split), _yhigh_split))
+        if _i in [4,5]:
+            _ax.set(ylim=(_ylow+_ylow_split, max(_ylow_split, 0)))
+
+        if (_i % 2 == 0):
+            _ax.set(ylabel=r"DOS $\left[\mathrm{eV}^{-1}\right]$")
+
+        if _needs_bottom_row and (_i in [4,5]):
+            _ax.set(xlabel="E [eV]")
+        elif not _needs_bottom_row and (_i in [2,3]):
+            _ax.set(xlabel="E [eV]")
+        for _idx in _peaks_idx:
+            _ax.axvline(_temp.E[_idx], color="k", linestyle="--", alpha=0.5, linewidth=0.8, zorder=0)
+
+
+
+    # Create legend (placement depends on if there is a second row or not)
+    _ncols = np.ceil( (len(N_bases)+1) / 3)
+    if _needs_bottom_row:
+        _fig.legend(scatter_plots, [f"N={_n}" for _n in _Ns_to_show] + [f"Exact (N={_N})"], ncols=_ncols, bbox_to_anchor=(0.5, -0.01), loc="upper center")
+    else:
+        _fig.legend(scatter_plots, [f"N={_n}" for _n in _Ns_to_show] + [f"Exact (N={_N})"], ncols=_ncols, bbox_to_anchor=(0.5, 0.2), loc="upper center")
+
+    if _needs_top_row:
+        _vspace = 1.
+    else:
+        _vspace = 0.76
+
+    _fig.suptitle(f"Extrapolation to target N={N_target}, NC={NC}", y=_vspace)
+    if _needs_top_row:
+        _axes[0,0].set(title="Top layer")
+        _axes[0,1].set(title="Bottom layer")
+    else:
+        _axes[1,0].set(title="Top layer")
+        _axes[1,1].set(title="Bottom layer")
+
+    if not _needs_top_row:
+        _axes = _axes[[1,2,0]]
+    label_subplots(_axes)
+    _fig.tight_layout()
+    # _fig.savefig(f"figures/read_rsse_NC{NC}_{N_bases[0]}-{N_bases[-1]}_to_{N_target}")
+    print(_axes.shape)
+    _fig
+    return
 
 
 @app.cell(hide_code=True)
@@ -210,13 +512,6 @@ def _():
 
     > check whether other non-divisors are problems
     """)
-    return
-
-
-@app.cell
-def _():
-    print(f"{2:<2} test")
-    print(f"{2   } test")
     return
 
 
@@ -267,7 +562,6 @@ def _():
 
 @app.cell
 def _(tbtout_bot):
-    from six import b
     Hs = []
     Ss = []
     RSSE = []
