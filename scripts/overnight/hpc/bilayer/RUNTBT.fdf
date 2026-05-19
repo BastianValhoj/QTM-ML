@@ -1,0 +1,57 @@
+SystemName siesta
+SystemLabel trans
+TBT.HS ./Ham_bilayer.nc
+
+TBT.T.Bulk True
+TBT.Current.Orb True
+TBT.DOS.Elecs True
+TBT.DOS.A.All True
+TBT.DOS.GF True
+
+TBT.Voltage 1.0 eV
+
+%block TS.Elecs
+    top
+    bottom
+%endblock TS.Elecs
+
+TBT.Elecs.Eta  0.001 eV
+TBT.Contours.Eta 0.001 eV ## Actually matters..
+
+%block TBT.contour.line
+    from -4.0. eV to 4.0. eV # write whatever contour, since we will overwrite it with the one we computed
+    file ./contour.IN
+%endblock TBT.contour.line
+
+%block TBT.ChemPots
+    top
+    bottom
+%endblock TBT.ChemPots
+
+%block TBT.ChemPot.top
+    mu 0.5
+%endblock TBT.ChemPot.top
+
+%block TBT.ChemPot.bottom
+    mu -0.5
+%endblock TBT.ChemPot.bottom
+
+%block Ts.Elec.top
+    HS ./Ham_elec_top.nc
+    semi-inf-direction abc
+    Electrode-position 1
+    Out-of-core True
+    bulk True
+    mu top
+    tbt.gf RSSE-TOP.TBTGF
+%endblock Ts.Elec.top
+
+%block Ts.Elec.bottom
+    HS ./Ham_elec_bottom.nc
+    semi-inf-direction abc
+    Electrode-position 71
+    Out-of-core True
+    bulk True
+    mu bottom
+    tbt.gf RSSE-BOTTOM.TBTGF
+%endblock Ts.Elec.bottom
