@@ -166,11 +166,11 @@ def write_submit_runtbt(output_dir: Path, n_small: int, n_big: int):
 # LSBATCH: User input
 #BSUB -J tbt-{n_small}-{n_big}
 #BSUB -q hpc
-#BSUB -R "rusage[mem=8GB]"
+#BSUB -R "rusage[mem=16GB]"
 #BSUB -B
 #BSUB -N
-#BSUB -W 00:20
-#BSUB -n 8
+#BSUB -W 03:00
+#BSUB -n 24
 #BSUB -R "span[hosts=1]"
 #BSUB -u s192943@student.dtu.dk
 #BSUB -o out.tbt.%J.log
@@ -181,9 +181,9 @@ module load siesta
 
 cd "{work_dir}" || {{ echo "ERROR: could not cd into {work_dir}"; exit 1; }}
 
-mpirun -n 4 tbtrans RUNTBT-TOP.fdf    > out.tbt-top.log
-mpirun -n 4 tbtrans RUNTBT-BOTTOM.fdf > out.tbt-bottom.log
-mpirun -n 1 tbtrans RUNTBT-OG.fdf     > out.tbt-og.log
+mpirun -n 24 tbtrans RUNTBT-TOP.fdf    > out.tbt-top.log
+mpirun -n 24 tbtrans RUNTBT-BOTTOM.fdf > out.tbt-bottom.log
+mpirun -n 24 tbtrans RUNTBT-OG.fdf     > out.tbt-og.log
 """
     submit_path = output_dir / "submit_runtbt.sh"
     with open(submit_path, "w") as f:
