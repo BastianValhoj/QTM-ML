@@ -20,6 +20,9 @@ NC = args.nc
 N = args.ns
 N_target = args.nb # or 50 (or 100)
 
+MU_TOP = 0.5
+MU_BOTTOM = - MU_TOP
+
 
 # if N > N_target:
 #     raise ValueError("N cannot be greater than N_target")
@@ -198,26 +201,28 @@ def main(d=3.35, v=0):
     # write TBTGF for top
     with sisl.io.tbtgfSileTBtrans(out_dir / "RSSE-TOP.TBTGF") as f:
         bz = sisl.BrillouinZone(Ham_elec_top)
-        f.write_header(bz, energies + eta*1j)
+        f.write_header(bz, energies + eta*1j, mu=MU_TOP)
         for ispin, new_k, k, E in tqdm(f, desc="Writing top TBTGF"):
             if new_k:
                 Sk = Ham_elec_top.Sk(format="array", dtype=np.complex128)
                 Hk = Ham_elec_top.Hk(format="array", dtype=np.complex128)
                 f.write_hamiltonian(H=Hk, S=Sk)
-            se = se_top.self_energy(elec='Border', E=E, k=k, sort=True)
-            f.write_self_energy(se)
+            se = se_top.self_energy(elec=0, E=E, k=k, sort=True)
+            se_bulk = (np.real(E)+eta*1j)*Sk - Hk - se
+            f.write_self_energy(se_bulk) # saving to tbtgf should be BULK self-energy !!!
     
     # write TBTGF for bottom
     with sisl.io.tbtgfSileTBtrans(out_dir / "RSSE-BOTTOM.TBTGF") as f:
         bz = sisl.BrillouinZone(Ham_elec_bottom)
-        f.write_header(bz, energies + eta*1j)
+        f.write_header(bz, energies + eta*1j, mu=MU_BOTTOM)
         for ispin, new_k, k, E in tqdm(f, desc="Writing bottom TBTGF"):
             if new_k:
                 Sk = Ham_elec_bottom.Sk(format="array", dtype=np.complex128)
                 Hk = Ham_elec_bottom.Hk(format="array", dtype=np.complex128)
                 f.write_hamiltonian(H=Hk, S=Sk)
-            se = se_bottom.self_energy(elec='Border', E=E, k=k, sort=True)
-            f.write_self_energy(se)
+            se = se_bottom.self_energy(elec=0, E=E, k=k, sort=True)
+            se_bulk = (np.real(E)+eta*1j)*Sk - Hk - se
+            f.write_self_energy(se_bulk) # saving to tbtgf should be BULK self-energy !!! 
     
     
     # write fdf file for tbtrans calculations
@@ -226,9 +231,12 @@ SystemLabel trans
 TBT.HS ./Ham_bilayer.nc
 
 TBT.T.Bulk True
+TBT.Current.Orb True
 TBT.DOS.Elecs True
 TBT.DOS.A.All True
 TBT.DOS.GF True
+
+TBT.Voltage {np.abs(MU_TOP-MU_BOTTOM)} eV
 
 %block TS.Elecs
     top
@@ -243,12 +251,26 @@ TBT.Contours.Eta {eta} eV ## Actually matters..
     file ./contour.IN
 %endblock TBT.contour.line
 
+%block TBT.ChemPots
+    top
+    bottom
+%endblock TBT.ChemPots
+
+%block TBT.ChemPot.top
+    mu V/2
+%endblock TBT.ChemPot.top
+
+%block TBT.ChemPot.bottom
+    mu -V/2
+%endblock TBT.ChemPot.bottom
+
 %block Ts.Elec.top
     HS ./Ham_elec_top.nc
     semi-inf-direction abc
     Electrode-position {1}
     Out-of-core True
     bulk True
+    chem-pot top
     tbt.gf RSSE-TOP.TBTGF
 %endblock Ts.Elec.top
 
@@ -258,6 +280,7 @@ TBT.Contours.Eta {eta} eV ## Actually matters..
     Electrode-position {N_elec_top+1}
     Out-of-core True
     bulk True
+    chem-pot bottom
     tbt.gf RSSE-BOTTOM.TBTGF
 %endblock Ts.Elec.bottom
 """
@@ -273,13 +296,13 @@ TBT.Contours.Eta {eta} eV ## Actually matters..
 ### Specify which queue (here, just the HPC)
 #BSUB -q hpc
 ### Request flag: reserve 16GB available for the duration of the job
-#BSUB -R "rusage[mem=16GB]"
+#BSUB -R "rusage[mem=8GB]"
 ### Notify when job begins
 #BSUB -B
 ### Notify when job ends
 #BSUB -N
 ### Wall-clock time (HH:MM)
-#BSUB -W 0:30
+#BSUB -W 02:00
 ### Number of processors
 #BSUB -n 8
 ### Request ressrouce: Use single host for ressources

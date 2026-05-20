@@ -76,7 +76,7 @@ def _(se_top):
         se_top.no_d
 
         sigma  = np.zeros(shape=(se_top.no_d, se_top.no_d), dtype=np.complex128)
-        sigma[np.ix_(pvt,pvt)] = tmp
+        sigma[np.ix_(pvt,pvt)] += tmp
         return sigma
 
     return (get_sigma,)
@@ -87,7 +87,7 @@ def _(get_sigma):
     sigma = get_sigma(E=1)
     vmax = np.abs(sigma.imag).max()
     vmin = -vmax
-    plt.imshow(sigma.imag[:100,:100], cmap="viridis", vmin=vmin, vmax=vmax)
+    plt.imshow(sigma.imag[:,:], cmap="viridis", vmin=vmin, vmax=vmax)
     return (sigma,)
 
 
@@ -121,6 +121,7 @@ def _(Ham_base, get_sigma, se_top):
         Hk = Ham_top.Hk(dtype=complex)
         z = E + se_top.eta()*1j
         _invg = z*Sk - Hk - get_sigma(E=E)
+        # 
         invG.append(_invg)
     invG = np.asarray(invG)
     return Ham_top, invG
@@ -186,7 +187,7 @@ def _(a_dev_bottom, a_dev_top, test_geom):
 
 @app.cell
 def _(a_buf, a_dev_bottom, a_dev_top, test_geom):
-    test_geom.plot(axes=[[1,0,0], [0,1,3]], backend="matplotlib", show_bonds=False, show_cell=False,
+    test_geom.plot(axes=[[1,0,0], [0,1,0]], backend="matplotlib", show_bonds=False, show_cell=False,
         atoms_style=[
             dict(atoms=a_dev_bottom, color="blue", border_width=0.), 
             dict(atoms=a_dev_top, color="red", border_width=0,),
@@ -291,6 +292,13 @@ def stack_device(data_path, d=3.35):
 @app.cell
 def _(geom_top):
     geom_top.add
+    return
+
+
+@app.cell
+def _():
+    _test = np.arange(9); print(_test)
+    np.delete(_test, [1,2,3])
     return
 
 
@@ -411,17 +419,6 @@ def _(Ham_bilayer, se_bottom, se_top):
 
 
 @app.cell
-def _():
-    # contour = sisl.io.table.tableSile(OUT_DIR(N_test) / "contour.IN")
-    # for _d in dir(contour):
-    #     if not _d.startswith("_"):
-    #         print(_d)
-    # contourE, contourEta = contour.read_data()
-    # sisl.io.table.tableSile(SCRIPT_DIR/"test_contour.IN", "w").write_data(contour.read_data())
-    return
-
-
-@app.cell
 def _(se_top):
     for _d in dir(se_top.self_energy(elec=0,E=0., k=0, sort=True)):
         if not _d.startswith("_"):
@@ -454,27 +451,6 @@ def _(Ham_bilayer, idx_dict, se_bottom, se_top):
     Ham_bilayer.geometry.plot(axes=["x", "y"], backend="matplotlib", show_cell=False, show_bonds=False,
         atoms_style=[dict(atoms=_pvt, color="red", size=_size)]
         )
-    return
-
-
-@app.cell
-def _():
-    # all_atoms = np.arange(Ham_bilayer.na)
-    # print(Ham_bilayer.na)
-    # elec_idx_top = se_top.pivot(elec=0, in_device=True, sort=True)
-    # print(elec_idx_top.shape)
-    # elec_idx_bottom = se_bottom.pivot(elec=0, in_device=False, sort=True)
-    # print(elec_idx_bottom, elec_idx_bottom.shape)
-    # elec_idx_bottom += se_top.na_dev # offset by num atoms of top layer to get indices of bilayer structure
-    # geom_bilayer.plot(axes="xy", backend="matplotlib", show_cell=False, show_bonds=False,
-    #     atoms_style=[
-    #         dict(atoms=elec_idx_bottom, color="blue"),
-    #     ]
-    # )
-
-    # elec_idx = np.concat([elec_idx_top, elec_idx_bottom])
-    # device_idx = np.delete(all_atoms, elec_idx)
-    # reorder_idx = np.concat([elec_idx, device_idx]) 
     return
 
 
