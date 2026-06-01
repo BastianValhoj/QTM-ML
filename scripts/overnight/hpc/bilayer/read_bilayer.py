@@ -98,7 +98,12 @@ def _(tbtout):
 def _(tbtout):
     _fig, _ax = plt.subplots()
 
-    _ax.plot(tbtout.E, tbtout.ADOS(elec='top'))
+    _ax.plot(tbtout.E, tbtout.ADOS(elec=1))
+    return
+
+
+@app.cell
+def _():
     return
 
 
