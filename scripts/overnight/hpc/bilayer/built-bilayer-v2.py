@@ -19,7 +19,13 @@ def _():
     N_target = 30
     _Nstart = 1 + 2*(1+NC)
     N_bases = range(_Nstart, N_target)
-    return NC, N_target
+    return NC, N_bases, N_target
+
+
+@app.cell
+def _(N_bases):
+    np.savez("test.npz", N_bases)
+    return
 
 
 @app.cell
@@ -55,7 +61,7 @@ def stack_device(data_path, which=("bottom", "bottom"), d=3.35):
     # print(se_top.na, se_top.na_dev, se_top.na_d)
     # print(se_top.elecs)
     # print(se_bottom.elecs)
-    
+
     # # get geometries
     geom_top = se_top.geometry.copy()
     geom_top = geom_top.translate([0, 0, d])
@@ -130,23 +136,46 @@ def _(DATA_DIR):
 
 
 @app.cell
+def _(idx_dict):
+    idx_top = list(idx_dict["elec_top"]) + list(idx_dict["device_top"])
+    idx_bottom = list(idx_dict["elec_bottom"]) + list(idx_dict["device_bottom"])
+    return idx_bottom, idx_top
+
+
+@app.cell
 def _():
     tbbi_opt
     return
 
 
 @app.cell
-def _(geom_bilayer):
-    Ham_bilayer = tbbi_opt(
+def _(geom_bilayer, idx_top):
+    angle  = 5
+    geom_bilayer_rot = geom_bilayer.rotate([angle, [0,0,1]], rad=False, what="xyz", atoms=idx_top)
+    Ham_bilayer, Htb = tbbi_opt(
         geom_bilayer,
-        os_0=0.0,
-        os_1=0.0,
+        os_0=-0.5,
+        os_1=+0.5,
         Vpppi=-2.7,
         Vpps=0.48,
         finite=True,
-        dangling=0.0
-    )
-    return (Ham_bilayer,)
+        dangling=0.0,
+    ); 
+    return Ham_bilayer, Htb
+
+
+@app.cell
+def _(Ham_bilayer, idx_dict):
+    print("coupling between two top atoms", Ham_bilayer.H[idx_dict["device_top"][52], idx_dict["device_top"][53]])
+    print("coupling between top -> bot atoms", Ham_bilayer.H[idx_dict["elec_top"][0], idx_dict["elec_bottom"][0]])
+    return
+
+
+@app.cell
+def _(Htb, idx_dict):
+    print("coupling between two top atoms", Htb.H[idx_dict["device_top"][52], idx_dict["device_top"][53]])
+    print("coupling between top -> bot atoms", Htb.H[idx_dict["elec_top"][0], idx_dict["elec_bottom"][0]])
+    return
 
 
 @app.cell
@@ -194,10 +223,8 @@ def _():
 
 
 @app.cell
-def _(Ham_bilayer, idx_dict):
+def _(Ham_bilayer, idx_bottom, idx_top):
     geom_center = Ham_bilayer.center()[:2]
-    idx_top = list(idx_dict["elec_top"]) + list(idx_dict["device_top"])
-    idx_bottom = list(idx_dict["elec_bottom"]) + list(idx_dict["device_bottom"])
 
     _radii_top = np.linalg.norm(Ham_bilayer.xyz[idx_top, :2] - geom_center, axis=1)
     _radii_bottom = np.linalg.norm(Ham_bilayer.xyz[idx_bottom, :2] - geom_center, axis=1)
@@ -208,39 +235,55 @@ def _(Ham_bilayer, idx_dict):
     _max_electrode_radii = np.min([_max_radius_top, _max_radius_bottom])
     _height = Ham_bilayer.xyz[:,2].max() - Ham_bilayer.xyz[:,2].min()
 
-    shift = 12
+    shift = 3
     Rmax = _max_electrode_radii - shift
     print(Rmax)
 
     hollow_cylinder = sisl.shape.EllipticalCylinder(Rmax, h=_height+10, center=Ham_bilayer.center())
     within_Rmax_mask = hollow_cylinder.within(Ham_bilayer.xyz)
     within_Rmax_mask.sum(), Ham_bilayer.na
-    return Rmax, geom_center, idx_bottom, idx_top, within_Rmax_mask
+    return Rmax, geom_center, within_Rmax_mask
 
 
 @app.cell
-def _(Ham_bilayer, within_Rmax_mask):
-    Ham_bilayer.geometry.plot(axes=[[1,0,0], [0,1,1]], show_cell=False, show_bonds=False, backend="matplotlib",
+def _(Ham_bilayer, idx_dict):
+    Ham_bilayer.geometry.plot(axes=[[1,0,0], [0,0,1]], show_cell=False, show_bonds=False, backend="matplotlib",
         atoms_style=[
-            dict(atoms=within_Rmax_mask, color="red"),
-            dict(atoms=~within_Rmax_mask, color="k", opacity=0.1),
+            # dict(atoms=within_Rmax_mask, color="red"),
+            # dict(atoms=~within_Rmax_mask, color="k", opacity=0.1),
+            dict(atoms=idx_dict['elec_top'][0], color="green", size=10),
+            dict(atoms=idx_dict['elec_bottom'][0], color="green", size=10),
         ]
     )
     return
 
 
 @app.cell
-def _(Ham_bilayer, Rmax, geom_center, idx_bottom, idx_top, within_Rmax_mask):
+def _(
+    Ham_bilayer,
+    Rmax,
+    geom_center,
+    idx_bottom,
+    idx_dict,
+    idx_top,
+    within_Rmax_mask,
+):
     # convert to compressed sparse row (CSR)
-    H_csr = Ham_bilayer.tocsr(0)
+    H_csr = Ham_bilayer.copy()
+    H_csr = H_csr.tocsr()
 
     # get row and column index of non-zero elements
     rows, cols = H_csr.nonzero()
-
+    print(f"atom in top : {idx_dict['elec_top'][0]}")
+    print(f"atom in bot : {idx_dict['elec_bottom'][0]}")
+    print("coupling")
+    print(Ham_bilayer[idx_dict["elec_top"][0], idx_dict["elec_bottom"][0]] )
+    print("distance")
+    print(Ham_bilayer.geometry.Rij(idx_dict['elec_top'][0], idx_dict['elec_bottom'][0]))
     ## layer membership boolean arrays
     # Initiate bool mask for indentifying elements in top of bottom
-    is_top = np.zeros(Ham_bilayer.na, dtype=bool)
-    is_bot = np.zeros(Ham_bilayer.na, dtype=bool)
+    is_top = np.zeros(Ham_bilayer.no, dtype=bool)
+    is_bot = np.zeros(Ham_bilayer.no, dtype=bool)
 
     # set mask elements to true for indices belogning to correct subset
     is_top[idx_top] = True
@@ -261,12 +304,12 @@ def _(Ham_bilayer, Rmax, geom_center, idx_bottom, idx_top, within_Rmax_mask):
     print(f"Interlayer elements kept:   {(is_interlayer & ~to_zero).sum():,}")
 
     for i, j in zip(rows[to_zero], cols[to_zero]):
-        Ham_bilayer[i, j] = 0.0
+        Ham_bilayer.H[i, j] = 0.0
 
     Ham_bilayer.eliminate_zeros()
 
     # verify
-    H_csr_after = Ham_bilayer.tocsr(0)
+    H_csr_after = H_csr.copy()
     rows_a, cols_a = H_csr_after.nonzero()
     interlayer_after = (is_top[rows_a] & is_bot[cols_a]) | (is_bot[rows_a] & is_top[cols_a])
     print(f"\nAfter masking:")
@@ -284,6 +327,17 @@ def _(Ham_bilayer, Rmax, geom_center, idx_bottom, idx_top, within_Rmax_mask):
     print(f"Rmax:                        {Rmax:.2f} Å")
     print(f"Max radius of rows in pairs: {r_rows.max():.2f} Å")
     print(f"Max radius of cols in pairs: {r_cols.max():.2f} Å")
+    return
+
+
+@app.cell
+def _():
+    67,932
+    return
+
+
+@app.cell
+def _():
     return
 
 
