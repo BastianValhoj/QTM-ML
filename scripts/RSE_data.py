@@ -8,6 +8,7 @@ import gc
 
 KIND = "armchair"
 
+print("KIND : {}".format(KIND))
 
 def systemInit(bond=1.43, t=-2.7, kind="zigzag"):
     if kind == "zigzag":
@@ -54,7 +55,7 @@ print('idx(E=0) : {}'.format(E0_IDX))
 
 # NLIST = np.array([4*i+1 for i in range(2, 6)])[::-1]
 if KIND == "armchair":
-    NLIST = np.array([2*i+1 for i in range(1, 4)])[::-1]
+    NLIST = np.array([2*i+1 for i in range(1, 6)])[::-1]
 elif KIND == "zigzag":
     NLIST = np.array([4*i+1 for i in range(2, 6)])[::-1]
 else:
@@ -132,3 +133,4 @@ with h5py.File(OUTDIR / f'RSE_data-{KIND}.h5', 'w') as file:
     del group_N, all_atoms, device_atoms, elec_idx, atoms_idx
     gc.collect()
 
+print("Done!")
