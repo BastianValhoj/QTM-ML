@@ -13,7 +13,7 @@ Vpppi = -2.7
 
 ENERGIES = [0]
 
-NK1S_ENUM = np.arange(500, 2500+1, step=200)
+NK1S_ENUM = np.arange(800, 1300+1, step=100)
 ETA = 1e-3
 
 N_zig = [2*i+1 for i in range(1,4)][::-1]
