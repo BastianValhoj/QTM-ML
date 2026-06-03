@@ -18,6 +18,7 @@ with app.setup:
 def _():
     DATA_DIR = Path(__file__).parent.parent / "conv_data"
     FIG_DIR = Path(__file__).parent.parent / "figures"
+    (DATA_DIR / "calc_dos_vs_eta.h5").exists()
     return (DATA_DIR,)
 
 
@@ -69,12 +70,12 @@ def _(DATA, ENERGIES, ETAS):
             _axes[0, _i].semilogy(ENERGIES, _DOS, label=f"$\\eta = {eta_formatter(_eta)}$", linestyle="-", marker=_marker_dict[f"{_eta:.1e}"])
             _E0_idx = np.argwhere(np.isclose(ENERGIES, 0, atol=1e-12))[0,0]
             _DOSE0_vs_ETA.append(_DOS[_E0_idx])
-    
+
         _axes[0,_i].set(title=_kind.capitalize())
 
-    
 
-        _axes[1,_i].loglog(ETAS, _DOSE0_vs_ETA, marker="o")
+
+        _axes[1,_i].loglog(ETAS, _DOSE0_vs_ETA, marker="o", color="k")
     _handles, _labels = _axes[0,0].get_legend_handles_labels()
     _fig.legend(_handles, _labels, loc="upper center", bbox_to_anchor=(0.5, 0.9))
 
