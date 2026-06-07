@@ -267,7 +267,7 @@ def eta_formatter(ETA):
     if mantissa == 1.0:
         return f"10^{{{exponent}}}"
     else:
-        return f"{mantissa:.1f}\\times 10^{{[{exponent}]}}"
+        return f"{mantissa:.1f}\\times 10^{{{exponent}}}"
 
 
 @app.cell
