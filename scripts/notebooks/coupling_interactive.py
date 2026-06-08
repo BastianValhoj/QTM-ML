@@ -23,7 +23,6 @@ def _():
     print(f"Script path: {SCRIPT_PATH}")
     FIG_DIR = SCRIPT_PATH.parent.parent / "figures"
     print(f"Figure directory: {FIG_DIR}")
-
     return FIG_DIR, SCRIPT_PATH
 
 
@@ -60,7 +59,7 @@ def _(DATA):
     # Choice of energy E based on available energy values in the dataset
     energies = DATA.attrs["E"].astype(float)
     # print("Available energy values: {}".format(energies))
-    energy_choice = mo.ui.slider(steps=energies, debounce=True, include_input=True, value=0.0, label="Energy, E (eV)")
+    energy_choice = mo.ui.slider(start=energies.min(), stop=energies.max(), step=np.abs(energies.max() - energies.min())/(len(energies)-1), debounce=True, include_input=True, value=0.0, label="Energy, E (eV)")
     return (energy_choice,)
 
 
@@ -77,7 +76,7 @@ def _(DATA):
 def _(energy_choice, eta_choice, tile_choice):
     # global parameters chosen by the user
     N = tile_choice.value
-    E = energy_choice.value
+    E = 0.0 if np.isclose(energy_choice.value, 0.0, atol=1e-16) else energy_choice.value
     ETA = eta_choice.value
     print("N : {}, E : {}, eta : {}".format(N, E, ETA))
     return E, ETA, N
@@ -290,7 +289,7 @@ def _(
     site_choice_zig,
     zig_params,
 ):
-    _fig, _axes = thesis_fig(subplots=(3,2))
+    _fig, _axes = thesis_fig(subplots=(3,2), fraction=0.8)
     _alpha = 0.6
     for _i, (_kind, _group, _N_elec, _N_first_edge) in enumerate(zip(["armchair", "zigzag"], [current_group_arm, current_group_zig], [N_elec_arm, N_elec_zig], [N_first_edge_arm, N_first_edge_zig])):
         _rsse = _group[f"eta_{ETA:.1e}"][:]
@@ -303,15 +302,17 @@ def _(
 
         _cbar_side = "right" if _i == 0 else "right"
         _axes[0,_i].scatter(_distances[_site], _coupling[_site], marker='^', s=50, label=f"site", color="red", alpha=_alpha)
+        _axes[0, _i].annotate(text=str(_site), xy=(_distances[_site], _coupling[_site]), xycoords="data", xytext=(0,10), textcoords="offset points", ha="center", va="center")
         _axes[0, _i].scatter(_distances[_first_edge_not_site], _coupling[_first_edge_not_site], marker='x', s=20, label="1st edge", color="red", alpha=_alpha)
-        _axes[0, _i].scatter(_distances[_N_first_edge:_N_elec], _coupling[_N_first_edge:_N_elec], marker='x', s=20, label="other edges", color="blue", alpha=_alpha)
+        _axes[0, _i].scatter(_distances[_N_first_edge:_N_elec], _coupling[_N_first_edge:_N_elec], marker='+', s=20, label="other edges", color="blue", alpha=_alpha)
         _axes[0, _i].scatter(_distances[_N_elec:], _coupling[_N_elec:], marker='.', s=10, label="bulk", color="k", alpha=_alpha)
         _axes[0, _i].set(xlabel="Distance to site ($\mathrm{\\AA}$)", ylabel="Coupling (eV)", title=f"{_kind.capitalize()}")
 
+        _axes[0,_i].formatter=cbarformatter
 
         _vmax = np.max(np.abs(_coupling))
         _vmin = -_vmax
-        _sc = _axes[1, _i].scatter(_group["xyz"][:,0], _group["xyz"][:,1], c=_coupling, cmap="RdBu", marker=".", s=20, vmin=_vmin, vmax=_vmax)
+        _sc = _axes[1, _i].scatter(_group["xyz"][:,0][::-1], _group["xyz"][:,1][::-1], c=_coupling[::-1], cmap="RdBu", marker=".", s=20, vmin=_vmin, vmax=_vmax)
         _cax = make_axes_locatable(_axes[1, _i]).append_axes(_cbar_side, size="5%", pad=0.05)
         cbar = _fig.colorbar(_sc, cax=_cax, label="Coupling (eV)")
         cbar.formatter = cbarformatter
@@ -321,7 +322,7 @@ def _(
 
         _vmax = np.max(np.abs(_onsite))
         _vmin = -_vmax
-        _axes[2, _i].scatter(_group["xyz"][:,0], _group["xyz"][:,1], c=_onsite, cmap="RdBu", marker=".", s=20, vmin=_vmin, vmax=_vmax)
+        _axes[2, _i].scatter(_group["xyz"][:,0][::-1], _group["xyz"][:,1][::-1], c=_onsite[::-1], cmap="RdBu", marker=".", s=20, vmin=_vmin, vmax=_vmax)
         _cax = make_axes_locatable(_axes[2, _i]).append_axes(_cbar_side, size="5%", pad=0.05)
         cbar = _fig.colorbar(_sc, cax=_cax, label="Onsite (eV)")
         cbar.formatter = cbarformatter
@@ -333,14 +334,14 @@ def _(
         # _ax.set_yticks([])
 
     _handles, _labels = _axes[0,0].get_legend_handles_labels()
-    _fig.legend(_handles, _labels, loc="upper left", bbox_to_anchor=(0.0, 1.09), ncol=2)
+    _fig.legend(_handles, _labels, loc="upper center", bbox_to_anchor=(0.85, 1.11), ncol=2)
     # _fig.tight_layout()
     _fig.set_constrained_layout(True)
     _fig.set_constrained_layout_pads(wspace=0.2,)
-    label_subplots(_axes.flatten(),)
+    label_subplots(_axes.flatten(),pos=(0.13, 0.9))
     _eta_power = int(np.log10(ETA))
 
-    _fig.suptitle(f"$z = {E:.1f} + i{eta_formatter(ETA)}$", y=1.05, x=0.55)
+    _fig.suptitle(f"$z = {E:.1f} + i{eta_formatter(ETA)}$", y=1.08, x=0.4)
     _fig.savefig(FIG_DIR / f"{SCRIPT_PATH.stem}_E{E:.2f}_eta{ETA:.1e}.pdf", bbox_inches="tight")
     mo.hstack([_fig, mo.vstack([energy_params,zig_params, arm_params], justify="start", align="center")], justify="start")
     return
