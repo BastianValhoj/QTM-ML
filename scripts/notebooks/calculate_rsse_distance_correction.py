@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.5"
+__generated_with = "0.23.6"
 app = marimo.App(width="full")
 
 with app.setup:
@@ -146,7 +146,7 @@ def _(Ham_re_small, rsse_big):
     nelec_big = len(elec_idx_big)
 
     print(Ham_re_small.nsc)
-    return Ham_elec_big, Ham_re_big, elec_idx_big, nelec_big
+    return Ham_elec_big, Ham_re_big, nelec_big
 
 
 @app.cell
@@ -470,7 +470,7 @@ def _(
 ):
     from mytools.plots import thesis_fig, label_subplots
     # _fig, _axes = plt.subplots(1, 2, sharey=True, figsize=(8,4))
-    _fig, _axes = thesis_fig(subplots=(2,1), sharex=True, dpi=150)
+    _fig, _axes = thesis_fig(subplots=(1,2), sharex=True, dpi=150)
     # _axes[0].plot(energies, dos_small, label="small")
     _axes[0].plot(energies, dos_small, label=f"N={N_small}", color="k")
     _axes[0].plot(energies, dos_extra, label=fr"N={N_small}$\to${N_big} (Naïve)")
@@ -535,7 +535,7 @@ def _(dos_dist, dos_extra, dos_small):
 
 
 @app.cell
-def _(Ham_re_big, elec_idx_big):
+def _(Ham_re_big):
     from ase.visualize import view
 
     atoms = np.concatenate([
@@ -551,10 +551,10 @@ def _(Ham_re_big, elec_idx_big):
     ]) - 1
     # view(Ham_re_big.geometry.to.ase())
 
-    Ham_re_big.geometry.plot(axes="xy", 
+    Ham_re_big.geometry.plot(axes="xy", backend="matplotlib",
     atoms_style=[
-        dict(atoms=atoms, color="red"),
-        dict(atoms=range(len(elec_idx_big)), color="blue")
+        # dict(atoms=atoms, color="red"),
+        # dict(atoms=range(len(elec_idx_big)), color="blue")
     ])
     return
 
