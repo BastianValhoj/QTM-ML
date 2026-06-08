@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.5"
+__generated_with = "0.23.6"
 app = marimo.App(width="full")
 
 with app.setup:
@@ -32,8 +32,8 @@ def _():
     B = BOND*np.cos(phi/2)
 
     # N0 = 3
-    N_small = 11
-    N_big = 50
+    N_small = 5
+    N_big = 11
 
     R = (0.1, BOND+1e-2)
     T = (0.0, -2.7)
@@ -138,7 +138,6 @@ def _(
     geom_edge_big,
     geom_edge_small,
 ):
-    from matplotlib.transforms import Bbox
     centroids_edge_small = get_centers(geom_edge_small.xyz[edges_small], Ham0.na)
     centroids_edge_big = get_centers(geom_edge_big.xyz[edges_big], Ham0.na)
 
@@ -149,10 +148,10 @@ def _(
 
 
 
-    fig, ax = thesis_fig()
+    fig, ax = thesis_fig(fraction=0.8)
 
-    ax.scatter(*centroids_frac_small[:, :2].T, color="darkorange")
-    ax.scatter(*centroids_frac_big[:, :2].T, color="lightsteelblue")
+    ax.scatter(*centroids_frac_small[:, :2].T, color="darkorange", label="Base centroids", marker="s", s=60)
+    ax.scatter(*centroids_frac_big[:, :2].T, color="lightsteelblue", label="Target centroids", marker="x")
 
     ax.set(
         xlabel="x (fractional)",
@@ -160,36 +159,49 @@ def _(
         # xticklabels=np.arange(0, 1.2, 0.2).round(3),
         # yticklabels=np.arange(0, 1.2, 0.2).round(3),
         )
-    shift = 5e-2
-    tol: float = 0.01
+    offset = 12
+    tol: float = 0.05
     for idx, (x,y) in enumerate(centroids_frac_small):
-        if (x < tol): dx = +shift
-        elif (x > 1 - tol): dx = -shift
+        if (x < tol): dx = +offset
+        elif (x > 1 - tol): dx = -offset
         else: dx = 0
 
-        if (y < tol): dy = +shift
-        elif (y > 1-tol): dy = -shift
+        if (y < tol): dy = +offset
+        elif (y > 1-tol): dy = -offset
         else: dy = 0
-        ax.annotate(text=str(idx), xy=(x,y), xytext=(x+dx,y+dy), ha="center", va="center",
+        ax.annotate(text=str(idx), xy=(x,y), xytext=(dx,dy), textcoords="offset points", ha="center", va="center",
         bbox=dict(facecolor="darkorange", pad=0.2, edgecolor="none", alpha=0.5))
 
     for idx, (x,y) in enumerate(centroids_frac_big):
-        if (x < tol): dx = -shift
-        elif (x > 1-tol): dx = +shift
+        if (x < tol): dx = -(offset)
+        elif (x > 1-tol): dx = +(offset)
         else: dx = 0
 
-        if (y < tol): dy = -shift
-        elif (x > 1-tol): dy = +shift
+        if (y < tol): dy = -(offset)
+        elif (y > 1-tol): dy = +(offset)
         else: dy = 0
 
-        ax.annotate(text=str(ii[idx]), xy=(x,y), xytext=(x+dx,y+dy), ha="center", va="center",
+        # print(ii[idx], np.array((x,y)), np.array((dx,dy)))
+
+        ax.annotate(text=str(ii[idx]), xy=(x,y), xycoords="data", xytext=(dx, dy), textcoords="offset points", ha="center", va="center",
         bbox=dict(facecolor="lightsteelblue", pad=0.2, edgecolor="none", alpha=0.5))
 
+    # ax.axhline(1-tol, linestyle=":")
+    # ax.axhline(tol, linestyle=":")
 
+    # ax.axvline(1-tol, linestyle=":")
+    # ax.axvline(tol, linestyle=":")
 
+    # ax.axis("equal")
+    limit_shift = 1e-1
     ymin, ymax = ax.get_ylim()
     xmin, xmax = ax.get_xlim()
-    ax.set(ylim=(min(ymin-shift, -shift), max(ymax+shift, shift)), xlim=(min(xmin-shift, -shift), max(ymax+shift, shift)) )
+    ax.set(
+        ylim=(min(ymin-limit_shift, -limit_shift), max(ymax+limit_shift, limit_shift)), 
+        xlim=(min(xmin-limit_shift, -limit_shift), max(ymax+limit_shift, limit_shift))
+    )
+
+    ax.legend()
     fig.suptitle("Centroid-based equivalence")
     fig.savefig(FIG_DIR / f"show_edges_centroids_{N_small}_to_{N_big}")
     fig
