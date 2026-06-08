@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.5"
+__generated_with = "0.23.6"
 app = marimo.App(width="full")
 
 with app.setup:
@@ -11,7 +11,7 @@ with app.setup:
     from mytools.scalingv2 import get_centers, get_corners, get_edges, get_fractional
     from mytools.scalingv2 import rsse_to_edge, rsse_mapping, map_edges, map_corners, extrapolate
     from mytools.construct import make_edge, all_armchair
-    from mytools.plots import thesis_fig
+    from mytools.plots import thesis_fig, label_subplots
 
     from typing import cast
 
@@ -101,7 +101,7 @@ def _():
 
 @app.cell
 def _(Ham0, N_big, N_small, edge_for_plot):
-    fig, axes = thesis_fig(subplots=(2,1))
+    fig, axes = thesis_fig(subplots=(1,2), )
     # fig = cast(plt.Figure, fig)
     # axes = cast(list[plt.Axes, plt.Axes], axes)
     for idx, ax in enumerate(axes):
@@ -110,20 +110,24 @@ def _(Ham0, N_big, N_small, edge_for_plot):
         geom_edge_big, edges_big, corners_big = edge_for_plot(Ham0, N_big, NC=idx)
         geom_edge_small = geom_edge_small.translate(-geom_edge_small.center())
         geom_edge_big = geom_edge_big.translate(-geom_edge_big.center())
-        ax.scatter(*geom_edge_big[edges_big, :2].T, color="darkorange")
-        ax.scatter(*geom_edge_small[edges_small, :2].T, color="darkorange")
+        ax.scatter(*geom_edge_big[edges_big, :2].T, color="darkorange", s=10, label="Edge")
+        ax.scatter(*geom_edge_small[edges_small, :2].T, color="darkorange", s=10)
 
-        ax.scatter(*geom_edge_big[corners_big, :2].T, color="grey")
-        ax.scatter(*geom_edge_small[corners_small, :2].T, color="grey")
+        ax.scatter(*geom_edge_big[corners_big, :2].T, color="grey", s=10, label="Corner")
+        ax.scatter(*geom_edge_small[corners_small, :2].T, color="grey", s=10)
         ax.set(title=f"NC={idx}", xticklabels="", yticklabels="")
         ax.set_axis_off()
+    label_subplots(axes)
+    _handles, _labels = axes[0].get_legend_handles_labels()
+    fig.legend(_handles, _labels, loc="upper center", bbox_to_anchor=(0.5, 0.4), ncols=2, title="Atom types", )
     fig.savefig(f"../figures/show_corner_fixed_{N_small}_to_{N_big}")
     fig
-    return
+    return (idx,)
 
 
 @app.cell
-def _():
+def _(Ham0, N_big, N_small, edge_for_plot, idx):
+    edge_for_plot(Ham0, N_small, NC=idx)[0].na, edge_for_plot(Ham0, N_big, NC=idx)[0].na
     return
 
 
