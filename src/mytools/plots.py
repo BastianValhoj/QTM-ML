@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import ticker
 import numpy as np
+from typing import Any, overload, Literal
 
 
 fontsize = 11
@@ -29,13 +30,36 @@ tex_fonts = {
         "savefig.transparent": False,   # Usually better for thesis background, and if I want to use slide decks with colored backgrounds
 }
 
+@overload
+def thesis_fig(
+    nrows: Literal[1] = 1, 
+    ncols: Literal[1] = 1,
+    *,
+    width_pt=426.79135, 
+    fraction=1, 
+    subplots=None, 
+    use_tex=False,
+    aspect=None,
+    **kwargs
+) -> tuple[plt.Figure, plt.Axes]: ...
 
-def thesis_fig(width_pt=426.79135, 
-        fraction=1, 
-        subplots=(1,1), 
-        use_tex=False,
-        aspect=None,
-        **kwargs) -> tuple[plt.Figure, plt.Axes]:
+@overload
+def thesis_fig(
+    nrows = 1, 
+    ncols = 1,
+    *,
+    width_pt=426.79135, 
+    fraction=1, 
+    subplots=None, 
+    use_tex=False,
+    aspect=None,
+    **kwargs
+) -> tuple[plt.Figure, plt.Axes]: ...
+
+def thesis_fig(nrows=1, ncols=1, 
+    *, width_pt=426.79135, fraction=1, subplots=None, use_tex=False, aspect=None, 
+    **kwargs
+    ) -> tuple[plt.Figure, plt.Axes | np.ndarray]:
     r"""
     Initializes a matplotlib figure with dimensions scaled to a LaTeX document.
 
@@ -62,12 +86,24 @@ def thesis_fig(width_pt=426.79135,
     inches_per_pt = 1/72.27
     fig_width_in = fig_width_pt * inches_per_pt
     
+    if ((nrows != 1) or (ncols != 1)) and not subplots is None:
+        print(f"{nrows=}, {ncols=}, {subplots=}")
+        print("Warning both `nrows, ncols` and `subplots` were given. Will use `nrows, ncols`")
+        return thesis_fig(nrows, ncols, 
+                          width_pt=width_pt, 
+                          fraction=fraction, 
+                          use_tex=use_tex, 
+                          aspect=aspect, 
+                          **kwargs)
+    if not subplots is None:
+        print("Warning: argument `subplots` is being deprecated. In the future use `ncols, nrows` as for `matplotlib.pyplot.subplots`")
+        nrows, ncols = subplots
     
     if aspect is None:
         golden_ratio = (5**0.5 - 1) / 2
-        fig_height_in = golden_ratio * fig_width_in * (subplots[0] / subplots[1])
+        fig_height_in = golden_ratio * fig_width_in * (nrows / ncols)
     else:
-        fig_height_in = (fig_width_in / subplots[1]) * subplots[1] * aspect
+        fig_height_in = fig_width_in * aspect
 
     tex_fonts["figure.figsize"] = (fig_width_in, fig_height_in)
     tex_fonts["text.usetex"] = use_tex
@@ -76,7 +112,7 @@ def thesis_fig(width_pt=426.79135,
     # 2. configure LaTeX-style fonts globally
     mpl.rcParams.update(tex_fonts)
 
-    fig, ax = plt.subplots(subplots[0], subplots[1], **kwargs)
+    # fig, ax = plt.subplots(subplots[0], subplots[1], **kwargs)
     
     # 3.  This handles both integers and floats
     # formatter = ticker.StrMethodFormatter('{x:,}')
@@ -92,7 +128,7 @@ def thesis_fig(width_pt=426.79135,
     #     a.xaxis.set_major_formatter(formatter)
     #     a.yaxis.set_major_formatter(formatter)
 
-    return fig, ax
+    return plt.subplots(nrows, ncols, **kwargs)
 
 
 
