@@ -117,9 +117,14 @@ def _(Ham0, N_big, N_small, edge_for_plot):
         ax.scatter(*geom_edge_small[corners_small, :2].T, color="grey", s=10)
         ax.set(title=f"NC={idx}", xticklabels="", yticklabels="")
         ax.set_axis_off()
+
+    axes[0].annotate(text="Target", xy=geom_edge_big.xyz[28*6, :2], xycoords="data", xytext=(20, 16), rotation=-30, arrowprops=dict(headlength=6, headwidth=6, width=2, color="k"))
+    axes[1].annotate(text="Target", xy=geom_edge_big.xyz[28*6, :2], xycoords="data", xytext=(20, 16), rotation=-30, arrowprops=dict(headlength=6, headwidth=6, width=2, color="k"))
+
+    axes[0].annotate(text="Base", xy=geom_edge_small.xyz[2*6, :2], xycoords="data", xytext=(-30, -20), rotation=-30)
     label_subplots(axes)
     _handles, _labels = axes[0].get_legend_handles_labels()
-    fig.legend(_handles, _labels, loc="upper center", bbox_to_anchor=(0.5, 0.4), ncols=2, title="Atom types", )
+    fig.legend(_handles, _labels, loc="upper center", bbox_to_anchor=(0.5, 0.4), ncols=2, title="Atom types")
     fig.savefig(f"../figures/show_corner_fixed_{N_small}_to_{N_big}")
     fig
     return (idx,)
