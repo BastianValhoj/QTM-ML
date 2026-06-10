@@ -133,12 +133,25 @@ def _(
         _axes.annotate("C", xy=(_x,_y), va="center", ha="center", bbox=dict(color="grey", pad=0.2, alpha=0.4))
 
     X, Y = np.array([
-        centroids_edge_big[0], 
-        centroids_edge_small[0]
+        centroids_edge_big[0], # naive
+        centroids_edge_small[0], # naive
+        #
+        centroids_edge_big[26], # valid
+        centroids_edge_small[8], # valid
+        #
+        centroids_edge_big[6], # invalid
+        centroids_edge_small[2], # invalid
         ]).T
     U, V = np.array([
-        centroids_edge_big[9], 
-        centroids_edge_small[3]
+        centroids_edge_big[9],  # naive
+        centroids_edge_small[3], # naive
+        #
+        centroids_edge_big[28], # valid
+        centroids_edge_small[8] + centroids_edge_big[28] - centroids_edge_big[26], # valid
+    
+        centroids_edge_big[11], # invalid
+        centroids_edge_small[2] + centroids_edge_big[11] - centroids_edge_big[6], # invalid
+
         ]).T
     _axes.set(xlim=(-42, 42), ylim=(-24, 24), xlabel=r"$x$ ($\mathrm{\AA}$)", ylabel=r" $y$ ($\mathrm{\AA}$)")
     _axes.quiver(X, Y,  U - X, V - Y, scale_units="xy", scale=1, zorder=4)
@@ -217,7 +230,7 @@ def _(
         xlabel="$x$ (fractional)",
         ylabel="$y$ (fractional)"
     )
-    
+
 
 
     _axes[1].scatter(*centroids_edge_big.T, marker="x", color="lightsteelblue", s=0)
@@ -237,7 +250,7 @@ def _(
         _axes[1].annotate("C", xy=(_x,_y), va="center", ha="center", bbox=dict(color="grey", pad=0.2, alpha=0.4))
 
     _axes[1].set(xlim=(-42, 42), ylim=(-24, 24), xlabel=r"$x$ ($\mathrm{\AA}$)", ylabel=r" $y$ ($\mathrm{\AA}$)")
-    _axes[1].quiver(X, Y,  U - X, V - Y, scale_units="xy", scale=1, zorder=4)
+    _axes[1].quiver(X[:2], Y[:2],  U[:2] - X[:2], V[:2] - Y[:2], scale_units="xy", scale=1, zorder=4)
 
 
     # arrow_proxy = FancyArrow(0, 0, 1, 0, width=0.3, color="black", length_includes_head=True)
@@ -255,7 +268,139 @@ def _(
 
 
 @app.cell
+def _(mo):
+    mo.md(r"""
+    # Show equivalent couplings based on $r_{j'}  = r_{i'} + \Delta R_{ij}$
+    """)
+    return
+
+
+@app.cell
+def _(
+    FIG_DIR,
+    NT,
+    Nb,
+    U,
+    V,
+    X,
+    Y,
+    centroids_corner_big,
+    centroids_corner_small,
+    centroids_edge_big,
+    centroids_edge_small,
+    ii,
+):
+    _fig, _axes = thesis_fig(subplots=(1,1), aspect=0.5)
+
+    _size = 100
+    _axes.scatter(*centroids_edge_big.T, marker="o", color="lightsteelblue", s=_size)
+    _axes.scatter(*centroids_edge_small.T, marker="o", color="darkorange", s=_size)
+    _axes.scatter(*centroids_edge_small.T, marker="o", edgecolor="k", facecolor="none", s=200, linestyle=":" )
+
+    _axes.annotate("tol", centroids_edge_small[3], ha="center", va="center", textcoords="offset points", xytext=(-8,11), rotation=30)
+    _axes.annotate("tol", centroids_edge_small[10], ha="center", va="center", textcoords="offset points", xytext=(-8,11), rotation=30)
+    _center_big = centroids_edge_big.mean(axis=0)
+
+    
+    for _idx, (_x,_y) in enumerate(centroids_edge_small[:, :2]):
+        _axes.annotate(str(_idx), xy=(_x,_y), va="center", ha="center", 
+        # bbox=dict(color="darkorange", pad=0.2)
+        )
+
+
+
+    for _idx, (_x,_y) in enumerate(centroids_edge_big[:, :2]):
+        _axes.annotate(str(ii[_idx]), xy=(_x,_y), va="center", ha="center", 
+        # bbox=dict(color="lightsteelblue", pad=0.2)
+        )
+
+        if _x > _center_big[0]: _dx = 9
+        elif _x < _center_big[0]: _dx = -9
+        else: _dx = 0
+
+        if _y > _center_big[1]: _dy = 9
+        elif _y < _center_big[1]: _dy = -9
+        else: _dy = 0
+        _axes.annotate(_idx, xy=(_x, _y), va="center", ha="center", textcoords="offset points",xytext=(_dx, _dy))
+
+
+
+    _axes.scatter(*centroids_corner_big.T, marker="o", color="grey", s=_size)
+    _axes.scatter(*centroids_corner_small.T, marker="o", color="grey", s=_size)
+    for (_x,_y) in centroids_corner_big:
+        _axes.annotate("C", xy=(_x,_y), va="center", ha="center", 
+        # bbox=dict(color="grey", pad=0.2, alpha=0.4)
+        )
+    for (_x,_y) in centroids_corner_small:
+        _axes.annotate("C", xy=(_x,_y), va="center", ha="center", 
+        # bbox=dict(color="grey", pad=0.2, alpha=.4)
+        )
+
+
+
+    _axes.set(xlim=(-42, 42), ylim=(-24, 24), xlabel=r"$x$ ($\mathrm{\AA}$)", ylabel=r" $y$ ($\mathrm{\AA}$)")
+    _axes.quiver(X[2:4], Y[2:4],  U[2:4] - X[2:4], V[2:4] - Y[2:4], scale_units="xy", scale=1, zorder=0)
+
+    _axes.quiver(X[4:6], Y[4:6],  U[4:6] - X[4:6], V[4:6] - Y[4:6], scale_units="xy", scale=1, zorder=0, color="red")
+
+
+    # arrow_proxy = FancyArrow(0, 0, 1, 0, width=0.3, color="black", length_includes_head=True)
+    _arrow_proxy_valid = Line2D([0], [0], marker=r'$\rightarrow$', color='black', 
+                         markersize=15, linestyle='None', label='Valid Coupling')
+    _arrow_proxy_invalid = Line2D([0], [0], marker=r'$\rightarrow$', color='red',
+                         markersize=15, linestyle='None', label='Invalid Coupling')
+    _axes.legend(handles=[_arrow_proxy_valid, _arrow_proxy_invalid], labels=["Valid", "Invalid"])
+
+    _fig.set_constrained_layout(True)
+    _fig.suptitle("Electrode atom couplings")
+    _fig.savefig(FIG_DIR / f"show_coupling_invalid_{Nb}_to_{NT}")
+    _fig
+    return
+
+
+@app.cell
 def _():
+    # _fig, _axes = thesis_fig(subplots=(1,2), aspect=0.5)
+
+    # _axes[0].scatter(*centroids_edge_big.T, marker="x", color="lightsteelblue", s=0)
+    # _axes[0].scatter(*centroids_edge_small.T, marker="s", color="darkorange", s=0)
+
+    # _axes[1].scatter(*centroids_edge_big.T, marker="x", color="lightsteelblue", s=0)
+    # _axes[1].scatter(*centroids_edge_small.T, marker="s", color="darkorange", s=0)
+
+    # for _ax in _axes:
+        
+    #     for _idx, (_x,_y) in enumerate(centroids_edge_small[:, :2]):
+    #         _ax.annotate(str(_idx), xy=(_x,_y), va="center", ha="center", bbox=dict(color="darkorange", pad=0.2))
+
+    #     for (_x,_y) in centroids_corner_small:
+    #         _ax.annotate("C", xy=(_x,_y), va="center", ha="center", bbox=dict(color="grey", pad=0.2, alpha=.4))
+
+    #     for _idx, (_x,_y) in enumerate(centroids_edge_big[:, :2]):
+    #         _ax.annotate(str(ii[_idx]), xy=(_x,_y), va="center", ha="center", bbox=dict(color="lightsteelblue", pad=0.2))
+
+    #     for (_x,_y) in centroids_corner_big:
+    #         # print(x,y)
+    #         _ax.annotate("C", xy=(_x,_y), va="center", ha="center", bbox=dict(color="grey", pad=0.2, alpha=0.4))
+
+    #     _ax.set(xlim=(-42, 42), ylim=(-24, 24), xlabel=r"$x$ ($\mathrm{\AA}$)", ylabel=r" $y$ ($\mathrm{\AA}$)")
+    # _axes[0].quiver(X[2:4], Y[2:4],  U[2:4] - X[2:4], V[2:4] - Y[2:4], scale_units="xy", scale=1, zorder=4)
+
+    # _axes[0].quiver(X[4:6], Y[4:6],  U[4:6] - X[4:6], V[4:6] - Y[4:6], scale_units="xy", scale=1, zorder=4, color="red")
+
+
+    # # arrow_proxy = FancyArrow(0, 0, 1, 0, width=0.3, color="black", length_includes_head=True)
+    # _arrow_proxy_valid = Line2D([0], [0], marker=r'$\rightarrow$', color='black', 
+    #                      markersize=15, linestyle='None', label='Valid Coupling')
+    # _arrow_proxy_invalid = Line2D([0], [0], marker=r'$\rightarrow$', color='red',
+    #                      markersize=15, linestyle='None', label='Invalid Coupling')
+    # _axes[0].legend(handles=[_arrow_proxy_valid, _arrow_proxy_invalid], labels=["Valid", "Invalid"])
+
+    # _fig.set_constrained_layout(True)
+    # _fig.suptitle("Electrode edge centroids")
+    # label_subplots(_axes, pos=(0.1, 0.98))
+    # _fig.savefig(FIG_DIR / f"show_coupling_valid_{Nb}_to_{NT}_")
+    # _fig
     return
 
 
