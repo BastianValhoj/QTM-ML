@@ -492,9 +492,9 @@ def plot_hexagonal_bz(ax, rcell):
     # ax.scatter(*K_points.T, s=40, color='#E84855', zorder=3)
     # ax.scatter(*M_points.T, s=40, color='#2E86AB', zorder=3)
     ax.scatter(0, 0, s=60, color='k', zorder=3)
-    ax.annotate('Γ', (0, 0),      xytext=(5, 5), textcoords='offset points', fontsize=10)
-    ax.annotate('K', K_points[0], xytext=(5, 3), textcoords='offset points', fontsize=10, color='k')
-    ax.annotate('M', M_points[0], xytext=(5, 3), textcoords='offset points', fontsize=10, color='k')
+    ax.annotate('Γ', (0, 0),      xytext=(-5, 5), textcoords='offset points')
+    ax.annotate('K', K_points[0], xytext=(5, 3), textcoords='offset points', color='k')
+    ax.annotate('M', M_points[0], xytext=(5, 3), textcoords='offset points', color='k')
 
     ax.set_aspect('equal')
     lim = max(np.linalg.norm(b1), np.linalg.norm(b2)) * 1.3
@@ -598,7 +598,7 @@ def _(FIG_DIR, Ham, kpoints_sisl, thesis_fig):
     for _vec, _label in [(b1, r'$\mathbf{b}_1$'), (b2, r'$\mathbf{b}_2$')]:
         _ax.annotate('', xytext=_vec, xy=(0, 0),
                     arrowprops=dict(arrowstyle='<-', color='k', lw=1.5))
-        _ax.text(*(_vec), _label, fontsize=9, color='k', ha='center')
+        _ax.text(*(_vec*0.75 + np.array([-0.06, 0])), _label, color='k', ha='center')
 
 
     # _fig.suptitle("BZ from sisl")
