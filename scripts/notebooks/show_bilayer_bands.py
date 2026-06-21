@@ -255,8 +255,10 @@ def _(Erange, eigs_AA, eigs_AB, klabels, kticks, lineark):
     #     _ax.fill_between(lineark, lower, upper, alpha=0.4, edgecolor="r", color="r")
 
     # _eigs = eigs
-    _ax.plot(lineark, eigs_AA[:,0], color='red', linestyle="--", alpha=0.9, lw=3, label="AA")
-    _ax.plot(lineark, eigs_AA[:,1:], color='red', linestyle="--", alpha=0.9, lw=3)
+    _ax.plot(lineark, eigs_AA[:,0], color='red', alpha=0.9, label="AA", 
+        linestyle="-", marker="o", markerfacecolor='None', markevery=12)
+    _ax.plot(lineark, eigs_AA[:,1:], color='red', alpha=0.9, 
+        linestyle="-", marker="o", markerfacecolor='None', markevery=12)
 
 
     _ax.plot(lineark, eigs_AB[:,0], color='k', linestyle="-", alpha=0.9, lw=2, label="AB")
