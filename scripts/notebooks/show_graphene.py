@@ -166,7 +166,7 @@ def _():
 
     Emax = 6
     Emin = -Emax
-    energies = np.linspace(Emin, Emax, 100)
+    energies = np.linspace(Emin, Emax, 300)
     Erange = (Emin, Emax)
     return Emax, Emin, Erange, Vpppi, bond, divisions, energies
 
@@ -189,6 +189,7 @@ def _(geom):
 def _(bond):
     # geom = sisl.geom.graphene(bond).tile(3,0).tile(3,1)
     geom = sisl.geom.graphene(bond)
+    geom.set_nsc([7,7,1])
     print(geom)
     return (geom,)
 
@@ -210,12 +211,13 @@ def _(Vpppi, bond, geom):
     Ham.construct([_R, _T])
 
 
-    # Ham = tbbi_opt(
-    #     geom,
-    #     0,
-    #     0,
-    #     dangling=0.
-    # )
+    Ham = tbbi_opt(
+        geom,
+        0,
+        0,
+        # field=1,
+        dangling=0.
+    )
     return (Ham,)
 
 
@@ -309,9 +311,10 @@ def _(mo):
 
 @app.cell
 def _(Ham, energies):
-    bz = sisl.MonkhorstPack(Ham, nkpt=[90, 90, 1])
+    bz = sisl.MonkhorstPack(Ham, nkpt=[250, 250, 1])
     bz_avg = bz.apply.average
-    DOS = bz_avg.eigenstate(wrap=lambda es:es.DOS(energies)).squeeze() / Ham.no
+    # DOS = bz.apply.array.eigenstate(wrap=lambda es: es.DOS(energies)).squeeze() / Ham.na
+    DOS = bz_avg.eigenstate(wrap=lambda es: es.DOS(energies)).squeeze() / Ham.na
     print(DOS.shape)
     return (DOS,)
 
@@ -358,8 +361,8 @@ def _(bond):
                 ax_inset.plot([ri[0], rj[0]], [ri[1], rj[1]], 'k-', lw=1., zorder=1)
 
         # Atoms
-        ax_inset.scatter(*A, s=80, color='blue', zorder=3)
-        ax_inset.scatter(*B, s=80, color='red', zorder=3)
+        ax_inset.scatter(*A, s=80, color='k', zorder=3)
+        ax_inset.scatter(*B, s=80, color='k', zorder=3, facecolor="white")
         ax_inset.annotate('A', A, xytext=(-10, 2), textcoords='offset points', ha="center", va="center",
                           color='k')
         ax_inset.annotate('B', B, xytext=(10, 2), textcoords='offset points', ha="center", va="center",
@@ -368,7 +371,7 @@ def _(bond):
         # Lattice vectors
         for vec, label in [(a1, r'$\mathbf{a}_1$'), (a2, r'$\mathbf{a}_2$')]:
             ax_inset.annotate('', xy=A + vec, xytext=A, zorder=0,
-                              arrowprops=dict(arrowstyle='->', color='grey', lw=1.5))
+                              arrowprops=dict(arrowstyle='->', color='k', lw=1.5))
             if vec is a1:
                 va = "top"
             elif vec is a2:
@@ -380,6 +383,51 @@ def _(bond):
         ax_inset.axis('off')
 
     return (plot_graphene_unitcell,)
+
+
+@app.function
+def plot_bz(ax, icell):
+    b1 = icell[0, :2]
+    b2 = icell[1, :2]
+
+    angle = np.degrees(np.arccos(
+        np.dot(b1, b2) / (np.linalg.norm(b1) * np.linalg.norm(b2))
+    ))
+
+    if angle > 90:  # sisl convention (120 deg)
+        K_points = np.array([
+            ( 2*b1 +   b2) / 3,
+            (   b1 + 2*b2) / 3,
+            (  -b1 +   b2) / 3,
+            (-2*b1 -   b2) / 3,
+            (  -b1 - 2*b2) / 3,
+            (   b1 -   b2) / 3,
+        ])
+    else:            # ASE convention (60 deg)
+        K_points = np.array([
+            ( 2*b1 -   b2) / 3,
+            (   b1 +   b2) / 3,
+            (  -b1 + 2*b2) / 3,
+            (-2*b1 +   b2) / 3,
+            (  -b1 -   b2) / 3,
+            (   b1 - 2*b2) / 3,
+        ])
+    M_points = np.array([(K_points[i] + K_points[(i+1) % 6]) / 2 for i in range(6) ])
+    hex_xy = np.vstack([K_points, K_points[0]])
+    ax.plot(hex_xy[:, 0], hex_xy[:, 1], 'k-', lw=1)
+    
+    ax.scatter(0, 0, s=20, color='k', zorder=3, facecolor="white") # Gamma
+    ax.scatter(K_points[0,0], K_points[0,1], s=20, color='k', zorder=3, facecolor="white") # K
+    ax.scatter(M_points[0,0], M_points[0,1], s=20, color='k', zorder=3, facecolor="white") # M
+
+    ax.annotate('Γ', (0, 0),      xytext=(-8, 0), textcoords='offset points', va="center", ha="center")
+    ax.annotate('K', K_points[0], xytext=(8, 0), textcoords='offset points', color='k', va="center", ha="center")
+    ax.annotate('M', M_points[0], xytext=(8, 0), textcoords='offset points', color='k', va="center", ha="center")
+    
+    ax.plot(*np.vstack(([0,0], K_points[0], M_points[0], [0,0])).T, color="k", linestyle="--", lw=2)
+
+    ax.axis("equal")
+    ax.axis("off")
 
 
 @app.cell
@@ -424,22 +472,25 @@ def _(
     _ax[1].grid()
 
     for _peak in find_peaks(DOS)[0]:
-        # print(_peak)
-        _ax[0].axhline(energies[_peak], linestyle=":", color="k")
-        _ax[1].axhline(energies[_peak], linestyle=":", color="k")
+        _ax[0].axhline(energies[_peak], linestyle=":", color="k", lw=1.2)
+        _disp = +7e-1
+        print("peak E:", energies[_peak])
+        if energies[_peak] < 0: _disp = (-1)*_disp
+        _ax[0].text(s=f"${energies[_peak]:.1f}$ eV", x=3.4, y=energies[_peak]+_disp, ha="center", va="center")
+        _ax[1].axhline(energies[_peak], linestyle=":", color="k", lw=1.2)
 
+    _xmin, _xmax = _ax[1].get_xlim()
+    _ax[1].set_xlim((0, _xmax))
 
-
-    _ax_inset = _ax[0].inset_axes([0.05, 0.28, 0.38, 0.42])
+    _ax_inset = _ax[0].inset_axes([0.01, 0.28, 0.3, 0.4])
     plot_graphene_unitcell(_ax_inset, geom)
 
-    # _bz_inset = _ax[0].inset_axes([0.8, 0.28, 0.38, 0.42])
-    # _bz_inset.add_artist(bz_ax)
+    # _ax_inset2 = _ax[0].inset_axes([0.6, 0.28, 0.4, 0.4])
+    # plot_bz(_ax_inset2, Ham.icell)
 
 
-    _fig.set_constrained_layout(True)
     _fig.suptitle("Graphene")
-
+    _fig.set_constrained_layout(True)
     _fig.savefig(FIG_DIR / "show_graphene_band_DOS")
     _fig
     return
@@ -596,7 +647,7 @@ def _(FIG_DIR, Ham, kpoints_sisl, thesis_fig):
     b2 = Ham.icell[1, :2]
 
     for _vec, _label in [(b1, r'$\mathbf{b}_1$'), (b2, r'$\mathbf{b}_2$')]:
-        _ax.annotate('', xytext=_vec, xy=(0, 0),
+        _ax.annotate('', xytext=_vec, xy=(0, 0), zorder=0,
                     arrowprops=dict(arrowstyle='<-', color='k', lw=1.5))
         _ax.text(*(_vec*0.75 + np.array([-0.06, 0])), _label, color='k', ha='center')
 
