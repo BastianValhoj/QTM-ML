@@ -12,10 +12,10 @@ def _():
     import matplotlib.pyplot as plt
 
 
-    from mytools.plots import thesis_fig
+    from mytools.plots import thesis_fig, label_subplots
     from pathlib import Path
 
-    return Path, sisl, thesis_fig
+    return Path, label_subplots, np, sisl, thesis_fig
 
 
 @app.cell
@@ -24,6 +24,54 @@ def _(Path):
     FIG_DIR = NOTEBOOK_DIR.parent / "figures"
     FIG_DIR.exists()
     return (FIG_DIR,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Edge plot parameters
+    """)
+    return
+
+
+@app.cell
+def _(sisl):
+    gr = sisl.geom.graphene(orthogonal=True).tile(10,0).tile(10,1)
+    return (gr,)
+
+
+@app.cell
+def _(gr, np):
+    xy = gr.xyz[:, :2]
+    arm_edge_idx = np.arange(284,298)
+    zig_edge_idx = np.array([284,245,246,247,248,209,210,211,212,173,174])
+    all_idx = np.arange(len(xy))
+    non_edge_idx = np.delete(all_idx, np.concat([arm_edge_idx,zig_edge_idx]))
+    return arm_edge_idx, xy, zig_edge_idx
+
+
+@app.cell
+def _(np, xy):
+    X, Y = np.array([
+        (xy[324] + xy[285])/2.,
+        (xy[243] + xy[284])/2.,
+    ]).T
+
+    U, V = np.array([
+        (xy[297] + xy[336])/2.,
+        (xy[173] + xy[172])/2.,
+    ]).T
+
+    print(U[1], V[1])
+    return U, V, X, Y
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Moire plot parameters
+    """)
+    return
 
 
 @app.cell
@@ -35,31 +83,69 @@ def _(sisl):
 
 @app.cell
 def _(flake1):
-    flake2 = flake1.rotate([10, [0,0,1]], origin=flake1.center(), what="xyz").translate((0,0,4))
+    flake2 = flake1.rotate([5, [0,0,1]], origin=flake1.center(), what="xyz").translate((0,0,4))
     flake2.plot(axes="xy", backend="matplotlib")
     return (flake2,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Combined plot
+    """)
+    return
+
+
 @app.cell
-def _(FIG_DIR, Path, flake1, flake2, thesis_fig):
-    fig, ax = thesis_fig(1,1)
+def _(
+    FIG_DIR,
+    Path,
+    U,
+    V,
+    X,
+    Y,
+    arm_edge_idx,
+    flake1,
+    flake2,
+    label_subplots,
+    thesis_fig,
+    xy,
+    zig_edge_idx,
+):
+    fig, ax = thesis_fig(1,2)
     xy1 = flake1.xyz[:, :2]
     xy2 = flake2.xyz[:, :2]
 
-    ax.scatter(*xy1.T, s=2, color="k")
-    ax.scatter(*xy2.T, s=2, color="k")
+    ax[0].scatter(*xy1.T, s=0.5, color="k")
+    ax[0].scatter(*xy2.T, s=0.5, color="k")
 
 
-    ax.set_aspect("equal")
-    ax.set(
-        xlabel=r"$x\ \ (\mathrm{\AA})$",
-        ylabel=r""
-        )
+    ax[0].set_aspect("equal")
+    # ax.set(
+    #     xlabel=r"$x\ \ (\mathrm{\AA})$",
+    #     ylabel=r""
+    #     )
 
-    ax.axis("off")
+    ax[1].scatter(*xy.T, color="grey", alpha=0.6)
+    ax[1].scatter(*xy[arm_edge_idx].T, color="red", alpha=0.4)
+    ax[1].scatter(*xy[zig_edge_idx].T, color="blue", alpha=0.4)
+    ax[1].quiver(X, Y, U-X, V-Y, scale=1, units="xy", angles="xy")
+
+    # ax.annotate
+
+    ax[0].axis("off")
+    ax[1].axis("off")
+
+    label_subplots(ax, pos=(-0.02, 0.95))
+
     fig.set_constrained_layout(True)
-    fig.savefig(FIG_DIR / str(Path(__file__).stem))
+    fig.savefig(FIG_DIR / f"{Path(__file__).stem}_graphene_edges_cut")
     fig
+    return
+
+
+@app.cell
+def _():
     return
 
 
