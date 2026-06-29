@@ -83,7 +83,7 @@ def _(sisl):
 
 @app.cell
 def _(flake1):
-    flake2 = flake1.rotate([5, [0,0,1]], origin=flake1.center(), what="xyz").translate((0,0,4))
+    flake2 = flake1.rotate([10, [0,0,1]], origin=flake1.center(), what="xyz").translate((0,0,4))
     flake2.plot(axes="xy", backend="matplotlib")
     return (flake2,)
 
@@ -141,11 +141,45 @@ def _(
     fig.set_constrained_layout(True)
     fig.savefig(FIG_DIR / f"{Path(__file__).stem}_graphene_edges_cut")
     fig
+    return xy1, xy2
+
+
+@app.cell
+def _(thesis_fig, xy1, xy2):
+    _fig, _ax = thesis_fig()
+
+    _ax.scatter(*xy1.T, s=2, color="k")
+    _ax.scatter(*xy2.T, s=2, color="k")
+
+
+
+    _ax.axis("equal")
+    _ax.axis("off")
+    _fig
     return
 
 
 @app.cell
-def _():
+def _(sisl, thesis_fig):
+    _fig, _ax = thesis_fig(1,1, figsize=(12,8), sharey=True)
+
+    gr1 = sisl.geom.graphene().tile(8,0).tile(8,1)
+    gr1 = gr1.translate(-gr1.center())
+    gr2 = sisl.geom.graphene().tile(20,0).tile(20,1)
+    gr2 = gr2.translate(-gr2.center()).translate((0, -50, 0))
+
+    _ax.scatter(*gr1.xyz[:,:2].T, color="k", s=10)
+    _ax.scatter(*gr2.xyz[:,:2].T, color="k", s=10)
+
+
+    # for _a in _ax:
+    #     # _a.axis("off")
+    #     _a.axis("scaled")
+
+    _ax.axis("off")
+    _ax.axis("equal")
+
+    _fig
     return
 
 
