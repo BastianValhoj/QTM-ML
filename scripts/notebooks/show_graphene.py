@@ -206,19 +206,22 @@ def _(mo):
 def _(Vpppi, bond, geom):
     from mytools.tbbi import tbbi_opt
     Ham = sisl.Hamiltonian(geom)
+
+    mu = 0.5 # eV
     _R = (0.1, bond+1e-2)
-    _T = (0.0, Vpppi)
+    _T = (mu, Vpppi)
+
     Ham.construct([_R, _T])
 
 
-    Ham = tbbi_opt(
-        geom,
-        0,
-        0,
-        # field=1,
-        dangling=0.
-    )
-    return (Ham,)
+    # Ham = tbbi_opt(
+    #     geom,
+    #     0,
+    #     0,
+    #     # field=1,
+    #     dangling=0.
+    # )
+    return Ham, mu
 
 
 @app.cell(hide_code=True)
@@ -415,7 +418,7 @@ def plot_bz(ax, icell):
     M_points = np.array([(K_points[i] + K_points[(i+1) % 6]) / 2 for i in range(6) ])
     hex_xy = np.vstack([K_points, K_points[0]])
     ax.plot(hex_xy[:, 0], hex_xy[:, 1], 'k-', lw=1)
-    
+
     ax.scatter(0, 0, s=20, color='k', zorder=3, facecolor="white") # Gamma
     ax.scatter(K_points[0,0], K_points[0,1], s=20, color='k', zorder=3, facecolor="white") # K
     ax.scatter(M_points[0,0], M_points[0,1], s=20, color='k', zorder=3, facecolor="white") # M
@@ -423,7 +426,7 @@ def plot_bz(ax, icell):
     ax.annotate('Γ', (0, 0),      xytext=(-8, 0), textcoords='offset points', va="center", ha="center")
     ax.annotate('K', K_points[0], xytext=(8, 0), textcoords='offset points', color='k', va="center", ha="center")
     ax.annotate('M', M_points[0], xytext=(8, 0), textcoords='offset points', color='k', va="center", ha="center")
-    
+
     ax.plot(*np.vstack(([0,0], K_points[0], M_points[0], [0,0])).T, color="k", linestyle="--", lw=2)
 
     ax.axis("equal")
@@ -443,6 +446,7 @@ def _(
     klabels,
     kticks,
     lineark,
+    mu,
     plot_graphene_unitcell,
     thesis_fig,
 ):
@@ -491,7 +495,7 @@ def _(
 
     _fig.suptitle("Graphene")
     _fig.set_constrained_layout(True)
-    _fig.savefig(FIG_DIR / "show_graphene_band_DOS")
+    _fig.savefig(FIG_DIR / f"show_graphene_band_DOS_bias{mu}.pdf")
     _fig
     return
 

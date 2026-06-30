@@ -30,7 +30,7 @@ def _():
     bond = 1.42
     Vpppi = -2.7
     Vpps = 0.48
-    divs = 250
+    divs = 400
 
 
     dAA = 3.55
@@ -39,7 +39,7 @@ def _():
 
     path = ["G", "M", "K", "G"]
 
-    Emax = 7
+    Emax = 5
     Emin = -Emax
     Erange = (Emin, Emax)
 
@@ -221,7 +221,7 @@ def _(Ham_AA, divs, knames, kpoints):
         divisions=divs,
         names=knames,
     )
-    band_AA.plot(backend="matplotlib", Erange=[-10,10])
+    band_AA.plot(backend="matplotlib", Erange=[-4,4])
     return (band_AA,)
 
 
@@ -233,8 +233,27 @@ def _(Ham_AB, divs, knames, kpoints):
         divisions=divs,
         names=knames,
     )
-    band_AB.plot(backend="matplotlib", Erange=[-10,10])
+    band_AB.plot(backend="matplotlib", Erange=[-4,4])
     return (band_AB,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Using eigenenergies
+    """)
+    return
+
+
+@app.cell
+def _(eigs_AA, klabels, kticks, lineark):
+    _fig, _ax = thesis_fig()
+
+    _ax.plot(lineark, eigs_AA, color="k")
+    _ax.set(xticks=kticks, xticklabels=klabels, xlim=kticks[[0,-1]], ylim=(-4,4))
+
+    _fig
+    return
 
 
 @app.cell(hide_code=True)
