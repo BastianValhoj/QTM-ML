@@ -24,11 +24,27 @@ with app.setup:
     from mytools.construct import all_armchair
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Directories
+    """)
+    return
+
+
 @app.cell
 def _():
     NOTEBOOK = Path(__file__)
     NOTEBOOK_DIR = NOTEBOOK.parent
     return NOTEBOOK, NOTEBOOK_DIR
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Define structures
+    """)
+    return
 
 
 @app.cell
@@ -50,6 +66,14 @@ def _(armchair):
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # RSSE and Ham parameters
+    """)
+    return
+
+
 @app.cell
 def _():
     eta = 1e-3
@@ -59,6 +83,14 @@ def _():
     Rs = (0.1, 1.44)
     Ts = (0, -2.7)
     return Rs, Ts, energies, eta, nk1
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Construct Ham and setup RSSE
+    """)
+    return
 
 
 @app.cell
@@ -89,6 +121,14 @@ def _(rsse_a, rsse_z):
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## method for reordering Hamiltonian with electrode atoms first
+    """)
+    return
+
+
 @app.function
 def reorder_ham(rsse, ret_idx=False):
     ham_unfold = rsse.real_space_parent()
@@ -109,6 +149,14 @@ def _(rsse_a, rsse_z):
     return Ham_re_a, Ham_re_z
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Write self-energies to file
+    """)
+    return
+
+
 @app.cell
 def _(NOTEBOOK_DIR, energies, eta, nk1, rsse_a, rsse_z):
     with h5py.File(NOTEBOOK_DIR / "rsse-edges_data.h5", "w") as f:
@@ -127,6 +175,22 @@ def _(NOTEBOOK_DIR, energies, eta, nk1, rsse_a, rsse_z):
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Plots
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## UI for choosing site for investigation
+    """)
+    return
+
+
 @app.cell
 def _(N_a, N_z):
     site_z = mo.ui. slider(0, N_z, label="site Zigzag", value=0, debounce=True, show_value=True, include_input=True)
@@ -134,6 +198,14 @@ def _(N_a, N_z):
 
     params = mo.hstack([site_z, site_a], justify="start")
     return params, site_a, site_z
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Plot interactive
+    """)
+    return
 
 
 @app.cell
@@ -217,98 +289,82 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    #
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    #
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    # Make it a GIF
+    ## Make it a GIF
     """)
     return
 
 
 @app.cell
-def _(Ham_re_a, Ham_re_z, NOTEBOOK, NOTEBOOK_DIR):
+def _():
 
 
-    def make_frame(fig, ax, _site_z, _site_a):
-        # remove all inset axes (anything that's not in the main ax grid)
-        main_axes = set(ax.flatten())
-        for _a in fig.axes[:]:
-            if _a not in main_axes:
-                _a.remove()
+    # def make_frame(fig, ax, _site_z, _site_a):
+    #     # remove all inset axes (anything that's not in the main ax grid)
+    #     main_axes = set(ax.flatten())
+    #     for _a in fig.axes[:]:
+    #         if _a not in main_axes:
+    #             _a.remove()
 
-        for _a in ax.flatten():
-            _a.cla()
+    #     for _a in ax.flatten():
+    #         _a.cla()
 
-        for _i, _E in enumerate(_energies):
-            _SE_site_z = _SE_z[_i, _site_z, :]
-            _SE_site_a = _SE_a[_i, _site_a, :]
-            _vmax_z = np.max(np.abs(_SE_site_z))
-            _vmax_a = np.max(np.abs(_SE_site_a))
+    #     for _i, _E in enumerate(_energies):
+    #         _SE_site_z = _SE_z[_i, _site_z, :]
+    #         _SE_site_a = _SE_a[_i, _site_a, :]
+    #         _vmax_z = np.max(np.abs(_SE_site_z))
+    #         _vmax_a = np.max(np.abs(_SE_site_a))
 
-            sc_z = ax[0, _i].scatter(*_xyz_z[:, :2].T, s=_size, c=_SE_site_z, cmap=_cmap,
-                vmin=-_vmax_z, vmax=_vmax_z)
-            sc_a = ax[1, _i].scatter(*_xyz_a[:, :2].T, s=_size, c=_SE_site_a, cmap=_cmap,
-                vmin=-_vmax_a, vmax=_vmax_a)
+    #         sc_z = ax[0, _i].scatter(*_xyz_z[:, :2].T, s=_size, c=_SE_site_z, cmap=_cmap,
+    #             vmin=-_vmax_z, vmax=_vmax_z)
+    #         sc_a = ax[1, _i].scatter(*_xyz_a[:, :2].T, s=_size, c=_SE_site_a, cmap=_cmap,
+    #             vmin=-_vmax_a, vmax=_vmax_a)
 
-            ax[0, _i].set_title(f"E={_E:.1f} eV")
-            ax[0, _i].annotate(_site_z, xy=_xyz_z[_site_z, :2], xytext=(15, 15),
-                xycoords="data", textcoords="offset points", arrowprops=dict(arrowstyle="->"))
-            ax[1, _i].annotate(_site_a, xy=_xyz_a[_site_a, :2], xytext=(15, 15),
-                xycoords="data", textcoords="offset points", arrowprops=dict(arrowstyle="->"))
+    #         ax[0, _i].set_title(f"E={_E:.1f} eV")
+    #         ax[0, _i].annotate(_site_z, xy=_xyz_z[_site_z, :2], xytext=(15, 15),
+    #             xycoords="data", textcoords="offset points", arrowprops=dict(arrowstyle="->"))
+    #         ax[1, _i].annotate(_site_a, xy=_xyz_a[_site_a, :2], xytext=(15, 15),
+    #             xycoords="data", textcoords="offset points", arrowprops=dict(arrowstyle="->"))
 
-            for _sc, _ax in [(sc_z, ax[0, _i]), (sc_a, ax[1, _i])]:
-                _cax = inset_axes(_ax, width="2%", height="50%", loc="lower left")
-                _cb = fig.colorbar(_sc, cax=_cax)
-                _cb.ax.set_title(r"Im($\Sigma_{ij}$)", pad=4)
-                _fmt = mticker.ScalarFormatter(useMathText=True)
-                _fmt.set_powerlimits((0, 0))
-                _cb.formatter = _fmt
-                _cb.update_ticks()
+    #         for _sc, _ax in [(sc_z, ax[0, _i]), (sc_a, ax[1, _i])]:
+    #             _cax = inset_axes(_ax, width="2%", height="50%", loc="lower left")
+    #             _cb = fig.colorbar(_sc, cax=_cax)
+    #             _cb.ax.set_title(r"Im($\Sigma_{ij}$)", pad=4)
+    #             _fmt = mticker.ScalarFormatter(useMathText=True)
+    #             _fmt.set_powerlimits((0, 0))
+    #             _cb.formatter = _fmt
+    #             _cb.update_ticks()
 
-        for _a in ax.flatten():
-            _a.axis("equal")
-            _a.set(xticks=[], yticks=[])
-            _a.axis("off")
+    #     for _a in ax.flatten():
+    #         _a.axis("equal")
+    #         _a.set(xticks=[], yticks=[])
+    #         _a.axis("off")
 
-    # Load data once outside loop
-    with h5py.File(NOTEBOOK_DIR / f"{NOTEBOOK.stem}_data.h5", "r") as _f:
-        _energies = np.asarray(_f["energies"])
-        _SE_z = np.asarray(_f["zigzag"]).imag
-        _SE_a = np.asarray(_f["armchair"]).imag
+    # # Load data once outside loop
+    # with h5py.File(NOTEBOOK_DIR / f"{NOTEBOOK.stem}_data.h5", "r") as _f:
+    #     _energies = np.asarray(_f["energies"])
+    #     _SE_z = np.asarray(_f["zigzag"]).imag
+    #     _SE_a = np.asarray(_f["armchair"]).imag
 
-    _xyz_z = Ham_re_z.xyz
-    _xyz_a = Ham_re_a.xyz
-    _size = 10
-    _cmap = "RdBu"
+    # _xyz_z = Ham_re_z.xyz
+    # _xyz_a = Ham_re_a.xyz
+    # _size = 10
+    # _cmap = "RdBu"
 
-    # Define frame indices — change these as needed
-    indices_z = [0, 1, 2, 3, 4, 5, 6,  7,  8,  9, 11]
-    indices_a = [0, 1, 2, 3, 5, 7, 9, 10, 11, 12, 13]
-    frames = list(zip(indices_z, indices_a))
+    # # Define frame indices — change these as needed
+    # indices_z = [0, 1, 2, 3, 4, 5, 6,  7,  8,  9, 11]
+    # indices_a = [0, 1, 2, 3, 5, 7, 9, 10, 11, 12, 13]
+    # frames = list(zip(indices_z, indices_a))
 
-    _fig, _ax = plt.subplots(2, len(_energies), figsize=(10, 5))
+    # _fig, _ax = plt.subplots(2, len(_energies), figsize=(10, 5))
 
-    def _animate(frame):
-        _site_z, _site_a = frame
-        make_frame(_fig, _ax, _site_z, _site_a)
+    # def _animate(frame):
+    #     _site_z, _site_a = frame
+    #     make_frame(_fig, _ax, _site_z, _site_a)
 
-    _ani = animation.FuncAnimation(_fig, _animate, frames=frames)
-    _ani.save(NOTEBOOK_DIR / "rsse-edges.gif", writer="pillow", fps=1)
-    plt.close(_fig)
-    print(f"Saved {len(frames)} frames")
+    # _ani = animation.FuncAnimation(_fig, _animate, frames=frames)
+    # _ani.save(NOTEBOOK_DIR / "rsse-edges.gif", writer="pillow", fps=1)
+    # plt.close(_fig)
+    # print(f"Saved {len(frames)} frames")
     return
 
 
@@ -351,27 +407,128 @@ def _(Ham_re_a, Ham_re_z, NOTEBOOK, NOTEBOOK_DIR, N_a, N_z, eta):
             _cb.ax.yaxis.get_offset_text().set_va("bottom")
             _cb.ax.yaxis.get_offset_text().set_ha("left")
 
+
         for _a in ax.flatten():
             _a.axis("equal")
-            _a.set(xticks=[], yticks=[])
+            _a.set(xlabel=r"$x$   (Å)")
+            # _a.set(xticks=[], yticks=[])
             # _a.axis("off")
-    
+        _ax[0].set(ylabel=r"$y$   (Å)")
+
         fig.tight_layout()
 
     for edge_type, xyz, SE, indices in [
         ("zigzag",   _xyz_z, _SE_z, range(N_z)),
         ("armchair", _xyz_a, _SE_a, range(N_a * 2 + 1)),
     ]:
-        _fig, _ax = plt.subplots(1, len(_energies), figsize=(10, 3))
-        _fig.suptitle(f"{edge_type.capitalize()}")
+        _fig, _ax = plt.subplots(1, len(_energies), figsize=(9, 3), sharey=True)
+        _fig.suptitle(f"{edge_type.capitalize()} - Couplings  $\mathrm{{Im}}(\Sigma_{{ij}})$")
         def animate(frame, fig=_fig, ax=_ax, xyz=xyz, SE=SE):
             make_frame_single(fig, ax, xyz, SE, frame)
 
         ani = animation.FuncAnimation(_fig, animate, frames=list(indices))
         _gif_name = f"rsse-edges_{edge_type}.gif"
-        ani.save(NOTEBOOK_DIR / _gif_name, writer="pillow", fps=len(indices)/10)
+        ani.save(NOTEBOOK_DIR / _gif_name, writer="pillow", fps=len(indices)/7)
         plt.close(_fig)
         print(f"Saved {_gif_name} ({len(list(indices))} frames)")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Plot onsites -- zig-zag
+    """)
+    return
+
+
+@app.cell
+def _(Ham_re_z, NOTEBOOK, NOTEBOOK_DIR):
+    # Load data
+    with h5py.File(NOTEBOOK_DIR / f"{NOTEBOOK.stem}_data.h5", "r") as _f:
+        _eta = _f.attrs["eta"]
+        _energies = np.asarray(_f["energies"])
+        _SE = np.asarray(_f["zigzag"]).imag
+        # _SE = np.asarray(_f["armchair"]).imag
+
+    _xyz = Ham_re_z.xyz
+    # _xyz = Ham_re_a.xyz
+    _size = 10
+    _cmap = "RdBu"
+
+
+    _fig, _ax = plt.subplots(1,len(_energies), figsize=(9,3), sharey=True)
+    for _i, _E in enumerate(_energies):
+        _vmax = np.max(np.abs(_SE[_i]))
+        _sc = _ax[_i].scatter(*_xyz[:, :2].T, s=_size, c=np.diag(_SE[_i]), cmap=_cmap, vmin=-_vmax, vmax=_vmax)
+
+        _ax[_i].set(xlabel=r"$x$   (Å)", title=rf"$E={_E:.1f}$ eV,  $\eta=10^{{{np.log10(_eta):.0f}}}$ eV")
+        _cax = inset_axes(_ax[_i], width="2%", height="30%", loc="lower left")
+        _cb = _fig.colorbar(_sc, cax=_cax, label=r"Im($\Sigma_{ij}$)")
+        # _cb.ax.set_title(r"Im($\Sigma_{ij}$)", pad=4)
+        _fmt = mticker.ScalarFormatter(useMathText=True)
+        _fmt.set_powerlimits((0, 0))
+        _cb.formatter = _fmt
+        _cb.update_ticks()
+        _cb.ax.yaxis.get_offset_text().set_va("bottom")
+        _cb.ax.yaxis.get_offset_text().set_ha("left")
+
+        _ax[_i].axis("equal")
+
+    _ax[0].set(ylabel=r"$y$   (Å)",)
+    _fig.suptitle(r"Zigzag - on-sites $\mathrm{Im}(\Sigma_{ii})$")
+    _fig.tight_layout()
+    _fig
+
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Plot onsite -- Armchair
+    """)
+    return
+
+
+@app.cell
+def _(Ham_re_a, NOTEBOOK, NOTEBOOK_DIR):
+    # Load data
+    with h5py.File(NOTEBOOK_DIR / f"{NOTEBOOK.stem}_data.h5", "r") as _f:
+        _eta = _f.attrs["eta"]
+        _energies = np.asarray(_f["energies"])
+        # _SE = np.asarray(_f["zigzag"]).imag
+        _SE = np.asarray(_f["armchair"]).imag
+
+    # _xyz = Ham_re_z.xyz
+    _xyz = Ham_re_a.xyz
+    _size = 10
+    _cmap = "RdBu"
+
+
+    _fig, _ax = plt.subplots(1,len(_energies), figsize=(9,3), sharey=True)
+    for _i, _E in enumerate(_energies):
+        _vmax = np.max(np.abs(_SE[_i]))
+        _sc = _ax[_i].scatter(*_xyz[:, :2].T, s=_size, c=np.diag(_SE[_i]), cmap=_cmap, vmin=-_vmax, vmax=_vmax)
+
+        _ax[_i].set(xlabel=r"$x$   (Å)", title=rf"$E={_E:.1f}$ eV,  $\eta=10^{{{np.log10(_eta):.0f}}}$ eV")
+        _cax = inset_axes(_ax[_i], width="2%", height="30%", loc="lower left")
+        _cb = _fig.colorbar(_sc, cax=_cax, label=r"Im($\Sigma_{ij}$)")
+        # _cb.ax.set_title(r"Im($\Sigma_{ij}$)", pad=4)
+        _fmt = mticker.ScalarFormatter(useMathText=True)
+        _fmt.set_powerlimits((0, 0))
+        _cb.formatter = _fmt
+        _cb.update_ticks()
+        _cb.ax.yaxis.get_offset_text().set_va("bottom")
+        _cb.ax.yaxis.get_offset_text().set_ha("left")
+
+        _ax[_i].axis("equal")
+
+    _ax[0].set(ylabel=r"$y$   (Å)",)
+    _fig.suptitle(r"Armchair - on-sites $\mathrm{Im}(\Sigma_{ii})$")
+    _fig.tight_layout()
+    _fig
+
     return
 
 
