@@ -346,7 +346,7 @@ def _(mo):
 
 @app.cell
 def _(bond):
-    def plot_graphene_unitcell(ax_inset, geom):
+    def plot_graphene_unitcell(ax_inset, geom, bonds=True):
         """
         Draw the 2-atom graphene unit cell with bonds and lattice vectors.
         geom must have nsc >= [3,3,1] so periodic NN bonds are visible.
@@ -357,11 +357,14 @@ def _(bond):
 
         # NN bonds (including periodic images)
         geom.set_nsc([3, 3, 1])
-        for ia in range(geom.na):
-            idx, xyz_n = geom.close(ia, R=[0.1, bond + 0.01], ret_xyz=True)
-            for Rj in xyz_n[1]:
-                ri, rj = geom.xyz[ia, :2], Rj[:2]
-                ax_inset.plot([ri[0], rj[0]], [ri[1], rj[1]], 'k-', lw=1., zorder=1)
+        if bonds:
+            for ia in range(geom.na):
+                idx, xyz_n = geom.close(ia, R=[0.1, bond + 0.01], ret_xyz=True)
+                for Rj in xyz_n[1]:
+                    ri, rj = geom.xyz[ia, :2], Rj[:2]
+                    ax_inset.plot([ri[0], rj[0]], [ri[1], rj[1]], 'k-', lw=1., zorder=1)
+        else:
+            ax_inset.plot(*geom.xyz[:, :2].T, 'k-', lw=1., zorder=1)
 
         # Atoms
         ax_inset.scatter(*A, s=80, color='k', zorder=3)
@@ -381,6 +384,7 @@ def _(bond):
                 va = "bottom"
             ax_inset.text(*(A + vec * 0.55), label,
                           color='k', ha='right', va=va)
+        ax_inset.set(ylim=(a1[1], a2[1]))
 
         ax_inset.set_aspect('equal')
         ax_inset.axis('off')
@@ -496,6 +500,85 @@ def _(
     _fig.suptitle("Graphene")
     _fig.set_constrained_layout(True)
     _fig.savefig(FIG_DIR / f"show_graphene_band_DOS_bias{mu}.pdf")
+    _fig
+    return
+
+
+@app.cell
+def _(geom, plot_graphene_unitcell, thesis_fig):
+    _fig, _ax = thesis_fig(fraction=0.4)
+
+    # _ax.scatter(*geom.xyz[0,:2].T, facecolor="k", s=50)
+    # _ax.scatter(*geom.xyz[1,:2].T, facecolor="white", edgecolor="k", s=50)
+    # _ax.plot(*geom.xyz[:, :2].T, 'k-', lw=1, zorder=0)
+
+    # _a1 = geom.cell[0, :2]
+    # _a2 = geom.cell[1, :2]
+
+    # _A = geom.xyz[0, :2]
+    # _B = geom.xyz[1, :2]
+
+    # _ax.annotate('A', _A, xytext=(-10, 2), textcoords='offset points', ha="center", va="center",
+    #                     color='k')
+    # _ax.annotate('B', _B, xytext=(10, 2), textcoords='offset points', ha="center", va="center",
+    #                     color='k')
+
+    # # ax.annotate(r"$\mathbf{a}_1$", )
+
+    # # Lattice vectors
+    # for _vec, _label in [(_a1, r'$\mathbf{a}_1$'), (_a2, r'$\mathbf{a}_2$')]:
+    #     _ax.annotate('', xy=_A + _vec, xytext=_A, zorder=0,  annotation_clip=False,
+    #                         arrowprops=dict(arrowstyle='->', color='k', lw=1.5))
+    #     if _vec is _a1:
+    #         _va = "top"
+    #     elif _vec is _a2:
+    #         _va = "bottom"
+    #     _ax.text(*(_A + _vec * 0.55), _label,
+    #                     color='k', ha='right', va=_va)
+
+    plot_graphene_unitcell(_ax, geom, True)
+
+    # _ax.set(ylim=(_A[1]+_a1[1], _A[1]+_a2[1]), xlim=(-0.5, 2))
+
+    _fig.savefig("show_graphene_unitcell")
+    _fig
+    return
+
+
+@app.cell
+def _(thesis_fig):
+    from mytools.construct import all_armchair
+
+    geom2 = all_armchair()
+
+    _fig, _ax = thesis_fig(fraction=0.4)
+
+    _ax.scatter(*geom2.xyz[[0,3,4], :2].T, color="k")
+    _ax.scatter(*geom2.xyz[[1,2,5], :2].T, edgecolors="k", facecolor="white")
+
+    _ax.plot(*geom2.xyz[[0,2,4,5,3,1, 0], :2].T, 'k-', lw=1, zorder=0)
+
+    _a1, _a2 = geom2.cell[0,:2], geom2.cell[1,:2]
+    _A, _B = geom2.xyz[0,:2], geom2.xyz[2,:2]
+    _ax.annotate('A', _A, xytext=(10,-4), textcoords="offset points", ha="center", va="center")
+    _ax.annotate('B', _B, xytext=(10,4), textcoords="offset points", ha="center", va="center")
+
+    for _vec, _label in [(_a1, r'$\mathbf{a}_1$'), (_a2, r'$\mathbf{a}_2$')]:
+        _ax.annotate('', xy=_vec, xytext=(0,0), zorder=0, annotation_clip=False,
+            arrowprops=dict(arrowstyle='->', color="k", lw=1.5))
+
+        if _vec is _a1:
+            _va = "top"
+        elif _vec is _a2:
+            _va = "bottom"
+
+        _ax.text(*(_vec*0.75), _label, color="k", ha="right", va=_va)
+
+    _ax.axis("equal")
+    _ax.axis("off")
+
+    # plot_graphene_unitcell(_ax, all_armchair(), True)
+
     _fig
     return
 

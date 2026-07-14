@@ -78,7 +78,7 @@ def _():
 def _():
     eta = 1e-3
     nk1 = int(np.ceil(2400/12))
-    energies = np.arange(0, 0.15, 0.1)
+    energies = np.array([0.0, 0.4])
 
     Rs = (0.1, 1.44)
     Ts = (0, -2.7)
@@ -410,10 +410,10 @@ def _(Ham_re_a, Ham_re_z, NOTEBOOK, NOTEBOOK_DIR, N_a, N_z, eta):
 
         for _a in ax.flatten():
             _a.axis("equal")
-            _a.set(xlabel=r"$x$   (Å)")
+            _a.set(xlabel=r"$x$   (Å)", ylabel=r"$y$   (Å)")
             # _a.set(xticks=[], yticks=[])
             # _a.axis("off")
-        _ax[0].set(ylabel=r"$y$   (Å)")
+        # _ax[0].set(ylabel=r"$y$   (Å)")
 
         fig.tight_layout()
 
@@ -421,7 +421,7 @@ def _(Ham_re_a, Ham_re_z, NOTEBOOK, NOTEBOOK_DIR, N_a, N_z, eta):
         ("zigzag",   _xyz_z, _SE_z, range(N_z)),
         ("armchair", _xyz_a, _SE_a, range(N_a * 2 + 1)),
     ]:
-        _fig, _ax = plt.subplots(1, len(_energies), figsize=(9, 3), sharey=True)
+        _fig, _ax = plt.subplots(len(_energies), 1, figsize=(5, 6), sharey=True)
         _fig.suptitle(f"{edge_type.capitalize()} - Couplings  $\mathrm{{Im}}(\Sigma_{{ij}})$")
         def animate(frame, fig=_fig, ax=_ax, xyz=xyz, SE=SE):
             make_frame_single(fig, ax, xyz, SE, frame)
@@ -457,7 +457,7 @@ def _(Ham_re_z, NOTEBOOK, NOTEBOOK_DIR):
     _cmap = "RdBu"
 
 
-    _fig, _ax = plt.subplots(1,len(_energies), figsize=(9,3), sharey=True)
+    _fig, _ax = plt.subplots(len(_energies), 1, figsize=(5, 6), sharey=True)
     for _i, _E in enumerate(_energies):
         _vmax = np.max(np.abs(_SE[_i]))
         _sc = _ax[_i].scatter(*_xyz[:, :2].T, s=_size, c=np.diag(_SE[_i]), cmap=_cmap, vmin=-_vmax, vmax=_vmax)
@@ -475,11 +475,10 @@ def _(Ham_re_z, NOTEBOOK, NOTEBOOK_DIR):
 
         _ax[_i].axis("equal")
 
-    _ax[0].set(ylabel=r"$y$   (Å)",)
+        _ax[_i].set(ylabel=r"$y$   (Å)")
     _fig.suptitle(r"Zigzag - on-sites $\mathrm{Im}(\Sigma_{ii})$")
     _fig.tight_layout()
     _fig
-
     return
 
 
@@ -506,7 +505,7 @@ def _(Ham_re_a, NOTEBOOK, NOTEBOOK_DIR):
     _cmap = "RdBu"
 
 
-    _fig, _ax = plt.subplots(1,len(_energies), figsize=(9,3), sharey=True)
+    _fig, _ax = plt.subplots(len(_energies), 1, figsize=(5, 6), sharey=True)
     for _i, _E in enumerate(_energies):
         _vmax = np.max(np.abs(_SE[_i]))
         _sc = _ax[_i].scatter(*_xyz[:, :2].T, s=_size, c=np.diag(_SE[_i]), cmap=_cmap, vmin=-_vmax, vmax=_vmax)
@@ -524,11 +523,10 @@ def _(Ham_re_a, NOTEBOOK, NOTEBOOK_DIR):
 
         _ax[_i].axis("equal")
 
-    _ax[0].set(ylabel=r"$y$   (Å)",)
+        _ax[_i].set(ylabel=r"$y$   (Å)",)
     _fig.suptitle(r"Armchair - on-sites $\mathrm{Im}(\Sigma_{ii})$")
     _fig.tight_layout()
     _fig
-
     return
 
 
